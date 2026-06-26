@@ -1,10 +1,7 @@
 {
-  "/onboarding/page": "app/onboarding/page.js",
-  "/page": "app/page.js",
-  "/dashboard/staff/page": "app/dashboard/staff/page.js",
-  "/dashboard/activity/page": "app/dashboard/activity/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js",
-  "/dashboard/overview/page": "app/dashboard/overview/page.js",
   "/dashboard/business-bible/page": "app/dashboard/business-bible/page.js",
-  "/dashboard/billing/page": "app/dashboard/billing/page.js"
+  "/dashboard/staff/page": "app/dashboard/staff/page.js",
+  "/dashboard/overview/page": "app/dashboard/overview/page.js",
+  "/dashboard/activity/page": "app/dashboard/activity/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js"
 }

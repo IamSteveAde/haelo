@@ -1,27 +1,423 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Upload, Search, Edit2, Trash2, AlertCircle, CheckCircle, X } from 'lucide-react'
+import { Plus, Upload, Search, Edit2, Trash2, AlertCircle, CheckCircle, X, Download, Save } from 'lucide-react'
 
-const staff = [
-  { id: 1, name: 'Tosin Adeyemi', role: 'Operations Manager', dept: 'Operations', email: 'tosin@company.com', status: 'active', timer: '10 min' },
-  { id: 2, name: 'Funke Balogun', role: 'HR Manager', dept: 'Human Resources', email: 'funke@company.com', status: 'active', timer: '10 min' },
-  { id: 3, name: 'Emeka Obi', role: 'Finance Analyst', dept: 'Finance', email: 'emeka@company.com', status: 'active', timer: '5 min' },
-  { id: 4, name: 'Aisha Mohammed', role: 'Sales Lead', dept: 'Sales', email: 'aisha@company.com', status: 'active', timer: '10 min' },
-  { id: 5, name: 'Chidi Nwosu', role: 'Product Manager', dept: 'Product', email: 'chidi@company.com', status: 'active', timer: '10 min' },
-  { id: 6, name: 'Yetunde Adeyemi', role: 'Customer Success', dept: 'Customer Success', email: 'yetunde@company.com', status: 'active', timer: '15 min' },
-  { id: 7, name: 'Babatunde Okon', role: 'Developer', dept: 'Engineering', email: 'babatunde@company.com', status: 'inactive', timer: '10 min' },
+const INK    = '#11270B'
+const NAVY   = '#0A1628'
+const CREAM  = '#F7F4EE'
+const WHITE  = '#FFFFFF'
+const GOLD   = '#B8962E'
+const GREEN  = '#2E7D52'
+const GREEN_BG   = 'rgba(46,125,82,0.08)'
+const INK_10 = 'rgba(17,39,11,0.1)'
+const INK_20 = 'rgba(17,39,11,0.2)'
+const INK_40 = 'rgba(17,39,11,0.4)'
+const INK_60 = 'rgba(17,39,11,0.6)'
+const INK_06 = 'rgba(17,39,11,0.06)'
+const AMBER  = '#B45309'
+const AMBER_BG   = 'rgba(180,83,9,0.07)'
+const AMBER_BORDER = 'rgba(180,83,9,0.18)'
+
+const GLOBAL_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body,html{font-family:'Plus Jakarta Sans',sans-serif;background:${CREAM};color:${INK};-webkit-font-smoothing:antialiased}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}
+@keyframes slideDown{from{opacity:0;max-height:0;transform:translateY(-6px)}to{opacity:1;max-height:300px;transform:translateY(0)}}
+.fade-up{animation:fadeUp .38s cubic-bezier(.4,0,.2,1) both}
+.fade-in{animation:fadeIn .22s cubic-bezier(.4,0,.2,1) both}
+.slide-down{animation:slideDown .25s cubic-bezier(.4,0,.2,1) both;overflow:hidden}
+`
+
+interface StaffMember {
+  id: number
+  name: string
+  role: string
+  dept: string
+  email: string
+  status: string
+  timer: string
+}
+
+const INITIAL_STAFF: StaffMember[] = [
+  { id: 1, name: 'Tosin Adeyemi',   role: 'Operations Manager', dept: 'Operations',       email: 'tosin@company.com',     status: 'active',   timer: '10 min' },
+  { id: 2, name: 'Funke Balogun',   role: 'HR Manager',         dept: 'Human Resources',  email: 'funke@company.com',     status: 'active',   timer: '10 min' },
+  { id: 3, name: 'Emeka Obi',       role: 'Finance Analyst',    dept: 'Finance',          email: 'emeka@company.com',     status: 'active',   timer: '5 min'  },
+  { id: 4, name: 'Aisha Mohammed',  role: 'Sales Lead',         dept: 'Sales',            email: 'aisha@company.com',     status: 'active',   timer: '10 min' },
+  { id: 5, name: 'Chidi Nwosu',     role: 'Product Manager',    dept: 'Product',          email: 'chidi@company.com',     status: 'active',   timer: '10 min' },
+  { id: 6, name: 'Yetunde Adeyemi', role: 'Customer Success',   dept: 'Customer Success', email: 'yetunde@company.com',   status: 'active',   timer: '15 min' },
+  { id: 7, name: 'Babatunde Okon',  role: 'Developer',          dept: 'Engineering',      email: 'babatunde@company.com', status: 'inactive', timer: '10 min' },
 ]
 
-const unrecognised = [
-  { email: 'david@company.com', received: '2h ago' },
-  { email: 'sarah.k@company.com', received: '5h ago' },
+const UNRECOGNISED_INIT = [
+  { email: 'david@company.com',    received: '2h ago' },
+  { email: 'sarah.k@company.com',  received: '5h ago' },
 ]
 
+const TIMER_OPTIONS = ['5 min', '10 min', '15 min', '20 min', '30 min']
+
+function initials(name: string) {
+  return name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+}
+
+// ── SHARED INPUT ──────────────────────────────────────────────────────────────
+function FieldInput({ label, type = 'text', placeholder, value, onChange, small }: {
+  label: string; type?: string; placeholder: string; value: string
+  onChange: (v: string) => void; small?: boolean
+}) {
+  const [foc, setFoc] = useState(false)
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase' as const, color: INK_40, marginBottom: 5 }}>
+        {label}
+      </label>
+      <input
+        type={type} placeholder={placeholder} value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
+        style={{
+          width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif",
+          background: foc ? WHITE : CREAM,
+          border: `1.5px solid ${foc ? INK : INK_10}`,
+          borderRadius: 10, padding: small ? '8px 12px' : '11px 14px',
+          fontSize: small ? 12 : 13, color: INK, outline: 'none',
+          boxShadow: foc ? `0 0 0 3px rgba(17,39,11,0.06)` : 'none',
+          transition: 'all .18s',
+        }}
+      />
+    </div>
+  )
+}
+
+// ── SELECT INPUT ──────────────────────────────────────────────────────────────
+function SelectInput({ label, value, onChange, options }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[]
+}) {
+  const [foc, setFoc] = useState(false)
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase' as const, color: INK_40, marginBottom: 5 }}>
+        {label}
+      </label>
+      <div style={{ position: 'relative' }}>
+        <select
+          value={value} onChange={e => onChange(e.target.value)}
+          onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
+          style={{
+            width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif",
+            background: foc ? WHITE : CREAM,
+            border: `1.5px solid ${foc ? INK : INK_10}`,
+            borderRadius: 10, padding: '8px 34px 8px 12px',
+            fontSize: 12, color: INK, outline: 'none', appearance: 'none',
+            WebkitAppearance: 'none', cursor: 'pointer',
+            boxShadow: foc ? `0 0 0 3px rgba(17,39,11,0.06)` : 'none',
+            transition: 'all .18s',
+          }}
+        >
+          {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <svg style={{ position: 'absolute', right: 10, top: '50%', transform: `translateY(-50%) rotate(${foc ? '-180' : '0'}deg)`, pointerEvents: 'none', transition: 'transform .2s' }}
+          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK_40} strokeWidth="2.2" strokeLinecap="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+// ── BUTTONS ───────────────────────────────────────────────────────────────────
+function BtnGhost({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: hov ? CREAM : 'transparent', border: `1.5px solid ${hov ? INK_20 : INK_10}`, borderRadius: 10, padding: '9px 16px', fontSize: 12, fontWeight: 600, color: hov ? INK : INK_60, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s' }}>
+      {children}
+    </button>
+  )
+}
+
+function BtnInk({ onClick, children, disabled = false, small }: { onClick: () => void; children: React.ReactNode; disabled?: boolean; small?: boolean }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button onClick={onClick} disabled={disabled} onMouseEnter={() => !disabled && setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: disabled ? INK_20 : hov ? '#1a3a12' : INK, color: disabled ? INK_40 : '#fff', border: 'none', borderRadius: 10, padding: small ? '7px 14px' : '9px 16px', fontSize: small ? 11 : 12, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s', transform: hov && !disabled ? 'translateY(-1px)' : 'none', boxShadow: hov && !disabled ? '0 4px 14px rgba(17,39,11,0.2)' : 'none' }}>
+      {children}
+    </button>
+  )
+}
+
+function BtnDanger({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: hov ? 'rgba(192,57,43,0.08)' : 'transparent', border: `1.5px solid ${hov ? 'rgba(192,57,43,0.25)' : INK_10}`, borderRadius: 10, padding: '9px 16px', fontSize: 12, fontWeight: 600, color: hov ? '#C0392B' : INK_60, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s' }}>
+      {children}
+    </button>
+  )
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [foc, setFoc] = useState(false)
+  return (
+    <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+      <Search size={14} color={INK_40} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+      <input type="text" placeholder="Search by name, role, or department…" value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
+        style={{ width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif", background: foc ? WHITE : CREAM, border: `1.5px solid ${foc ? INK : INK_10}`, borderRadius: 10, padding: '10px 14px 10px 40px', fontSize: 13, color: INK, outline: 'none', boxShadow: foc ? `0 0 0 3px rgba(17,39,11,0.06)` : 'none', transition: 'all .18s' }} />
+    </div>
+  )
+}
+
+// ── UNRECOGNISED ROW ──────────────────────────────────────────────────────────
+function UnrecognisedRow({ u, onAdd, onDismiss }: { u: { email: string; received: string }; onAdd: () => void; onDismiss: () => void }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: hov ? WHITE : CREAM, border: `1.5px solid ${hov ? AMBER_BORDER : 'rgba(180,83,9,0.1)'}`, borderRadius: 11, transition: 'all .18s', boxShadow: hov ? '0 4px 14px rgba(180,83,9,0.07)' : 'none' }}>
+      <div style={{ width: 32, height: 32, background: AMBER_BG, border: `1px solid ${AMBER_BORDER}`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14, fontWeight: 700, color: AMBER }}>?</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 1 }}>{u.email}</p>
+        <p style={{ fontSize: 11, color: INK_40 }}>Received {u.received}</p>
+      </div>
+      <BtnInk onClick={onAdd} small><Plus size={12} /> Add</BtnInk>
+      <BtnGhost onClick={onDismiss}>Dismiss</BtnGhost>
+    </div>
+  )
+}
+
+// ── EDIT PANEL (inline, expands below the row) ────────────────────────────────
+function EditPanel({ staff, onSave, onCancel, onToggleStatus }: {
+  staff: StaffMember
+  onSave: (updated: StaffMember) => void
+  onCancel: () => void
+  onToggleStatus: () => void
+}) {
+  const [form, setForm] = useState({
+    name:   staff.name,
+    role:   staff.role,
+    dept:   staff.dept,
+    email:  staff.email,
+    timer:  staff.timer,
+    status: staff.status,
+  })
+
+  const changed = (
+    form.name !== staff.name || form.role !== staff.role ||
+    form.dept !== staff.dept || form.email !== staff.email ||
+    form.timer !== staff.timer
+  )
+
+  const handleSave = () => {
+    // TODO: POST to /api/staff/:id with form data
+    onSave({ ...staff, ...form })
+  }
+
+  return (
+    <tr className="slide-down">
+      <td colSpan={6} style={{ padding: 0, background: 'transparent' }}>
+        <div style={{ margin: '0 0 2px', background: WHITE, border: `1.5px solid ${INK_10}`, borderRadius: 14, overflow: 'hidden' }}>
+          {/* Edit header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: `1px solid ${INK_06}`, background: CREAM }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, background: INK, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
+                {initials(staff.name)}
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: INK }}>Editing {staff.name}</p>
+                <p style={{ fontSize: 11, color: INK_40 }}>Changes saved immediately to the staff directory</p>
+              </div>
+            </div>
+            <button onClick={onCancel}
+              style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${INK_10}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = CREAM)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <X size={13} color={INK_40} />
+            </button>
+          </div>
+
+          {/* Fields grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 16, padding: '20px 20px 16px' }}>
+            <FieldInput label="Full name"   placeholder="Full name"   value={form.name}  onChange={v => setForm(f => ({ ...f, name: v }))}  small />
+            <FieldInput label="Role"        placeholder="Role"        value={form.role}  onChange={v => setForm(f => ({ ...f, role: v }))}  small />
+            <FieldInput label="Department"  placeholder="Department"  value={form.dept}  onChange={v => setForm(f => ({ ...f, dept: v }))}  small />
+            <FieldInput label="Email"       placeholder="Email"       value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} small type="email" />
+            <SelectInput label="Timer" value={form.timer} onChange={v => setForm(f => ({ ...f, timer: v }))} options={TIMER_OPTIONS} />
+          </div>
+
+          {/* Actions row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderTop: `1px solid ${INK_06}`, background: CREAM }}>
+            {/* Left: status toggle */}
+            <button
+              onClick={() => setForm(f => ({ ...f, status: f.status === 'active' ? 'inactive' : 'active' }))}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600,
+                padding: '6px 12px', borderRadius: 9, border: `1px solid ${INK_10}`,
+                background: 'transparent', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif",
+                color: form.status === 'active' ? INK_60 : '#C0392B',
+                transition: 'all .18s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = WHITE)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: form.status === 'active' ? GREEN : '#C0392B', flexShrink: 0 }} />
+              {form.status === 'active' ? 'Mark as inactive' : 'Mark as active'}
+            </button>
+
+            {/* Right: cancel + save */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <BtnGhost onClick={onCancel}>Cancel</BtnGhost>
+              <BtnInk onClick={handleSave} disabled={!changed} small>
+                <Save size={12} />
+                {changed ? 'Save changes' : 'No changes'}
+              </BtnInk>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+// ── STAFF TABLE ROW ───────────────────────────────────────────────────────────
+function StaffRow({ s, isEditing, onEditToggle, onDelete }: {
+  s: StaffMember; isEditing: boolean; onEditToggle: () => void; onDelete: () => void
+}) {
+  const [hov, setHov] = useState(false)
+  const [delHov, setDelHov] = useState(false)
+  const [editHov, setEditHov] = useState(false)
+
+  return (
+    <tr
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        background: isEditing ? CREAM : hov ? CREAM : WHITE,
+        transition: 'background .15s',
+        borderBottom: `1px solid ${INK_06}`,
+        borderLeft: isEditing ? `3px solid ${INK}` : '3px solid transparent',
+      }}
+    >
+      <td style={{ padding: '13px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+          <div style={{ width: 34, height: 34, background: hov || isEditing ? INK : INK_06, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: hov || isEditing ? '#fff' : INK_40, flexShrink: 0, transition: 'all .2s', letterSpacing: '.02em' }}>
+            {initials(s.name)}
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 1 }}>{s.name}</p>
+            <p style={{ fontSize: 11, color: INK_40 }}>{s.email}</p>
+          </div>
+        </div>
+      </td>
+      <td style={{ padding: '13px 20px', fontSize: 12, color: INK_60, fontWeight: 500 }}>{s.role}</td>
+      <td style={{ padding: '13px 20px', fontSize: 12, color: INK_60, fontWeight: 500 }}>{s.dept}</td>
+      <td style={{ padding: '13px 20px' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: INK_06, color: INK_60 }}>{s.timer}</span>
+      </td>
+      <td style={{ padding: '13px 20px' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: s.status === 'active' ? GREEN_BG : INK_06, color: s.status === 'active' ? GREEN : INK_40 }}>
+          {s.status === 'active' ? 'Active' : 'Inactive'}
+        </span>
+      </td>
+      <td style={{ padding: '13px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+          {/* EDIT BUTTON */}
+          <button
+            onClick={onEditToggle}
+            onMouseEnter={() => setEditHov(true)}
+            onMouseLeave={() => setEditHov(false)}
+            title={isEditing ? 'Close editor' : 'Edit staff member'}
+            style={{
+              width: 30, height: 30, borderRadius: 8,
+              border: `1px solid ${isEditing ? INK_20 : editHov ? INK_20 : 'transparent'}`,
+              background: isEditing ? INK : editHov ? WHITE : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'all .15s',
+            }}
+          >
+            {isEditing
+              ? <X size={13} color="#fff" />
+              : <Edit2 size={13} color={editHov ? INK : INK_40} />
+            }
+          </button>
+
+          {/* DELETE BUTTON */}
+          <button
+            onClick={onDelete}
+            onMouseEnter={() => setDelHov(true)}
+            onMouseLeave={() => setDelHov(false)}
+            title="Remove staff member"
+            style={{
+              width: 30, height: 30, borderRadius: 8,
+              border: `1px solid ${delHov ? 'rgba(192,57,43,0.2)' : 'transparent'}`,
+              background: delHov ? 'rgba(192,57,43,0.06)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'all .15s',
+            }}
+          >
+            <Trash2 size={13} color={delHov ? '#C0392B' : INK_40} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+// ── ADD MODAL ─────────────────────────────────────────────────────────────────
+function AddModal({ onClose, onAdd }: {
+  onClose: () => void
+  onAdd: (s: { name: string; role: string; email: string; dept: string }) => void
+}) {
+  const [form, setForm] = useState({ name: '', role: '', email: '', dept: '' })
+  const valid = form.name.trim() && form.role.trim() && form.email.trim() && form.dept.trim()
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, backdropFilter: 'blur(2px)' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="fade-in" style={{ background: WHITE, borderRadius: 18, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 24px 64px rgba(10,22,40,0.22)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: GOLD, marginBottom: 4 }}>Staff Directory</p>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: '-0.02em' }}>Add staff member</h2>
+          </div>
+          <button onClick={onClose}
+            style={{ width: 32, height: 32, borderRadius: 9, border: `1.5px solid ${INK_10}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all .15s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = CREAM; (e.currentTarget as HTMLButtonElement).style.borderColor = INK_20 }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.borderColor = INK_10 }}>
+            <X size={15} color={INK_40} />
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
+          <FieldInput label="Full name"     placeholder="Amara Okafor"       value={form.name}  onChange={v => setForm(f => ({ ...f, name: v }))} />
+          <FieldInput label="Role"          placeholder="Marketing Manager"   value={form.role}  onChange={v => setForm(f => ({ ...f, role: v }))} />
+          <FieldInput label="Email address" placeholder="amara@company.com"  value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} type="email" />
+          <FieldInput label="Department"    placeholder="Marketing"           value={form.dept}  onChange={v => setForm(f => ({ ...f, dept: v }))} />
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <BtnGhost onClick={onClose}>Cancel</BtnGhost>
+          <div style={{ flex: 1 }}>
+            <BtnInk onClick={() => { if (valid) { onAdd(form); onClose() } }} disabled={!valid}>
+              <CheckCircle size={13} /> Add staff member
+            </BtnInk>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function StaffPage() {
-  const [search, setSearch] = useState('')
-  const [showAdd, setShowAdd] = useState(false)
-  const [newStaff, setNewStaff] = useState({ name: '', role: '', email: '', dept: '' })
+  const [staff, setStaff]               = useState<StaffMember[]>(INITIAL_STAFF)
+  const [unrecognised, setUnrecognised] = useState(UNRECOGNISED_INIT)
+  const [search, setSearch]             = useState('')
+  const [showAdd, setShowAdd]           = useState(false)
+  const [editingId, setEditingId]       = useState<number | null>(null)
+  const [tableHov, setTableHov]         = useState(false)
+  const [savedId, setSavedId]           = useState<number | null>(null)
 
   const filtered = staff.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -29,164 +425,176 @@ export default function StaffPage() {
     s.dept.toLowerCase().includes(search.toLowerCase())
   )
 
+  const addStaff = (form: { name: string; role: string; email: string; dept: string }) => {
+    setStaff(prev => [...prev, { id: Date.now(), ...form, status: 'active', timer: '10 min' }])
+  }
+
+  const saveStaff = (updated: StaffMember) => {
+    setStaff(prev => prev.map(s => s.id === updated.id ? updated : s))
+    setEditingId(null)
+    setSavedId(updated.id)
+    setTimeout(() => setSavedId(null), 2500)
+  }
+
+  const deleteStaff = (id: number) => {
+    if (editingId === id) setEditingId(null)
+    setStaff(prev => prev.filter(s => s.id !== id))
+  }
+
+  const dismissUnrecognised = (email: string) =>
+    setUnrecognised(prev => prev.filter(u => u.email !== email))
+
+  const promoteUnrecognised = (u: typeof UNRECOGNISED_INIT[0]) => {
+    setShowAdd(true)
+    dismissUnrecognised(u.email)
+  }
+
+  const downloadCSV = () => {
+    const cols = ['Name', 'Role', 'Department', 'Email', 'Status', 'Timer']
+    const rows = staff.map(s => [s.name, s.role, s.dept, s.email, s.status, s.timer])
+    const csv = [cols.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n')
+    const a = document.createElement('a')
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+    a.download = 'haelo_staff_directory.csv'; a.click()
+  }
+
   return (
-    <main className="flex-1 p-6 lg:p-8 overflow-auto">
-      <div className="mb-8 lg:ml-0 ml-12">
-        <p className="section-label mb-1">Staff Directory</p>
-        <h1 className="text-2xl font-bold text-navy" style={{ letterSpacing: '-0.02em' }}>
-          Your team
-        </h1>
-        <p className="text-midgray text-sm mt-1">
-          Everyone Haelo recognises. Add, edit, or remove staff at any time.
-        </p>
-      </div>
+    <>
+      <style>{GLOBAL_CSS}</style>
+      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={addStaff} />}
 
-      {/* Unrecognised queue */}
-      {unrecognised.length > 0 && (
-        <div className="card border-amber-200 bg-amber-50 mb-6">
-          <div className="flex items-center gap-3 mb-3">
-            <AlertCircle size={16} className="text-amber-600" />
-            <p className="text-sm font-bold text-navy">{unrecognised.length} unrecognised senders</p>
+      <main style={{ flex: 1, padding: '40px 40px 60px', overflowY: 'auto', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+
+        {/* HEADER */}
+        <div className="fade-up" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, marginBottom: 32 }}>
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: GOLD, marginBottom: 6 }}>Staff Directory</p>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: INK, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 4 }}>Your team.</h1>
+            <p style={{ fontSize: 13, color: INK_60, fontWeight: 500 }}>
+              Every person Haelo recognises.{' '}
+              <strong style={{ color: INK }}>{staff.length} members</strong> in your directory.
+            </p>
           </div>
-          <p className="text-xs text-midgray mb-4">
-            Haelo received emails from these addresses but doesn&apos;t recognise them. Add them to the directory or dismiss.
-          </p>
-          <div className="space-y-2">
-            {unrecognised.map((u) => (
-              <div key={u.email} className="flex items-center gap-3 bg-white rounded-lg p-3">
-                <div className="w-7 h-7 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xs font-bold">
-                  ?
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-navy">{u.email}</p>
-                  <p className="text-xs text-midgray">Received {u.received}</p>
-                </div>
-                <button className="btn-primary text-xs py-1.5 px-3">Add</button>
-                <button className="btn-ghost text-xs py-1.5 px-3">Dismiss</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            <BtnGhost onClick={downloadCSV}><Download size={13} /> Export CSV</BtnGhost>
+            <BtnGhost onClick={() => {}}><Upload size={13} /> Import CSV</BtnGhost>
+            <BtnInk onClick={() => setShowAdd(true)}><Plus size={13} /> Add staff</BtnInk>
+          </div>
+        </div>
+
+        {/* SAVED TOAST */}
+        {savedId !== null && (
+          <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 16px', background: GREEN_BG, border: `1.5px solid rgba(46,125,82,0.2)`, borderRadius: 11, marginBottom: 16 }}>
+            <CheckCircle size={14} color={GREEN} />
+            <p style={{ fontSize: 12, fontWeight: 600, color: GREEN }}>
+              Changes saved — {staff.find(s => s.id === savedId)?.name}
+            </p>
+          </div>
+        )}
+
+        {/* UNRECOGNISED ALERT */}
+        {unrecognised.length > 0 && (
+          <div className="fade-up" style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 18px', background: 'transparent', border: `1.5px solid ${AMBER_BORDER}`, borderRadius: 14, marginBottom: 12 }}>
+              <AlertCircle size={16} color={AMBER} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 2 }}>
+                  {unrecognised.length} unrecognised sender{unrecognised.length > 1 ? 's' : ''}
+                </p>
+                <p style={{ fontSize: 12, color: INK_60, lineHeight: 1.5 }}>
+                  Haelo received emails from these addresses but doesn't recognise them. Add them to the directory so future emails are handled correctly.
+                </p>
               </div>
-            ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {unrecognised.map(u => (
+                <UnrecognisedRow key={u.email} u={u}
+                  onAdd={() => promoteUnrecognised(u)}
+                  onDismiss={() => dismissUnrecognised(u.email)} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Controls */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-silver" />
-          <input
-            type="text"
-            placeholder="Search staff..."
-            className="input pl-10"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+        {/* SEARCH */}
+        <div style={{ marginBottom: 16 }}>
+          <SearchInput value={search} onChange={setSearch} />
         </div>
-        <button className="btn-ghost text-sm">
-          <Upload size={14} />
-          Import CSV
-        </button>
-        <button className="btn-primary text-sm" onClick={() => setShowAdd(true)}>
-          <Plus size={14} />
-          Add staff
-        </button>
-      </div>
 
-      {/* Add form modal */}
-      {showAdd && (
-        <div className="fixed inset-0 bg-navy/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-elevated w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-navy">Add staff member</h2>
-              <button onClick={() => setShowAdd(false)} className="p-1.5 hover:bg-offwhite rounded-lg">
-                <X size={16} />
+        {/* TABLE */}
+        <div
+          onMouseEnter={() => setTableHov(true)}
+          onMouseLeave={() => setTableHov(false)}
+          style={{
+            background: tableHov ? WHITE : 'transparent',
+            border: `1.5px solid ${tableHov ? INK_20 : INK_10}`,
+            borderRadius: 16, overflow: 'hidden',
+            transition: 'all .22s cubic-bezier(.4,0,.2,1)',
+            boxShadow: tableHov ? '0 8px 32px rgba(17,39,11,0.09)' : 'none',
+          }}
+        >
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: CREAM, borderBottom: `1px solid ${INK_10}` }}>
+                  {['Name', 'Role', 'Department', 'Timer', 'Status', ''].map((h, i) => (
+                    <th key={h || i} style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: INK_40, padding: '11px 20px', whiteSpace: 'nowrap' }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '48px 20px', textAlign: 'center' }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: INK_40, marginBottom: 4 }}>No staff found</p>
+                      <p style={{ fontSize: 12, color: INK_20 }}>Try adjusting your search.</p>
+                    </td>
+                  </tr>
+                ) : filtered.map(s => (
+                  <>
+                    <StaffRow
+                      key={s.id}
+                      s={s}
+                      isEditing={editingId === s.id}
+                      onEditToggle={() => setEditingId(editingId === s.id ? null : s.id)}
+                      onDelete={() => deleteStaff(s.id)}
+                    />
+                    {editingId === s.id && (
+                      <EditPanel
+                        key={`edit-${s.id}`}
+                        staff={s}
+                        onSave={saveStaff}
+                        onCancel={() => setEditingId(null)}
+                        onToggleStatus={() => {}}
+                      />
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 20px', background: CREAM, borderTop: `1px solid ${INK_10}` }}>
+            <p style={{ fontSize: 11, color: INK_40, fontWeight: 500 }}>
+              Showing <strong style={{ color: INK, fontWeight: 700 }}>{filtered.length}</strong> of{' '}
+              <strong style={{ color: INK, fontWeight: 700 }}>{staff.length}</strong> staff members
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span style={{ fontSize: 11, color: INK_40 }}>
+                <span style={{ fontWeight: 700, color: GREEN }}>{staff.filter(s => s.status === 'active').length}</span> active ·{' '}
+                <span style={{ fontWeight: 700, color: INK_40 }}>{staff.filter(s => s.status === 'inactive').length}</span> inactive
+              </span>
+              <button onClick={downloadCSV}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: GREEN, background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                <Download size={11} /> Download CSV
               </button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="label">Full name</label>
-                <input className="input" placeholder="Amara Okafor" value={newStaff.name} onChange={e => setNewStaff(s => ({ ...s, name: e.target.value }))} />
-              </div>
-              <div>
-                <label className="label">Role</label>
-                <input className="input" placeholder="Marketing Manager" value={newStaff.role} onChange={e => setNewStaff(s => ({ ...s, role: e.target.value }))} />
-              </div>
-              <div>
-                <label className="label">Email</label>
-                <input className="input" type="email" placeholder="amara@company.com" value={newStaff.email} onChange={e => setNewStaff(s => ({ ...s, email: e.target.value }))} />
-              </div>
-              <div>
-                <label className="label">Department</label>
-                <input className="input" placeholder="Marketing" value={newStaff.dept} onChange={e => setNewStaff(s => ({ ...s, dept: e.target.value }))} />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button className="btn-ghost flex-1 justify-center" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button className="btn-primary flex-1 justify-center" onClick={() => setShowAdd(false)}>Add member</button>
-              </div>
-            </div>
           </div>
         </div>
-      )}
-
-      {/* Staff table */}
-      <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-offwhite">
-                <th className="text-left text-xs font-bold uppercase tracking-wide text-midgray px-5 py-3.5">Name</th>
-                <th className="text-left text-xs font-bold uppercase tracking-wide text-midgray px-5 py-3.5 hidden md:table-cell">Role</th>
-                <th className="text-left text-xs font-bold uppercase tracking-wide text-midgray px-5 py-3.5 hidden lg:table-cell">Department</th>
-                <th className="text-left text-xs font-bold uppercase tracking-wide text-midgray px-5 py-3.5 hidden lg:table-cell">Timer</th>
-                <th className="text-left text-xs font-bold uppercase tracking-wide text-midgray px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s, i) => (
-                <tr key={s.id} className={`border-b border-border last:border-0 hover:bg-offwhite/60 transition-colors ${i % 2 === 0 ? '' : ''}`}>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-navy rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {s.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-navy">{s.name}</p>
-                        <p className="text-xs text-midgray">{s.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-midgray hidden md:table-cell">{s.role}</td>
-                  <td className="px-5 py-4 text-sm text-midgray hidden lg:table-cell">{s.dept}</td>
-                  <td className="px-5 py-4 hidden lg:table-cell">
-                    <span className="badge-silver">{s.timer}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={s.status === 'active' ? 'badge-lime' : 'badge-silver'}>
-                      {s.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button className="p-1.5 hover:bg-offwhite rounded-lg text-silver hover:text-navy transition-colors">
-                        <Edit2 size={14} />
-                      </button>
-                      <button className="p-1.5 hover:bg-red-50 rounded-lg text-silver hover:text-red-500 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-5 py-3 border-t border-border bg-offwhite flex items-center justify-between">
-          <p className="text-xs text-midgray">{filtered.length} of {staff.length} staff members</p>
-          <button className="text-xs font-bold text-lime hover:underline flex items-center gap-1">
-            <Upload size={11} /> Download CSV
-          </button>
-        </div>
-      </div>
-    </main>
+      </main>
+    </>
   )
 }
