@@ -1,194 +1,597 @@
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/layout/Footer'
-import WhatsAppMessage from '@/components/ui/WhatsAppMessage'
+'use client'
+
 import Link from 'next/link'
-import {
-  Mail, CheckCircle, Zap, Shield, Clock, Users,
-  ArrowRight, Star, ChevronRight, MessageSquare,
-  BookOpen, LayoutDashboard, Activity, Settings2
-} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
-// ── HERO ──────────────────────────────────────────────────────────────────────
-function Hero() {
-  return (
-    <section className="pt-32 pb-24 px-6 bg-offwhite overflow-hidden relative">
-      {/* Subtle grid background */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: 'linear-gradient(#0D1B2A 1px, transparent 1px), linear-gradient(90deg, #0D1B2A 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }}
-      />
-
-      <div className="max-w-6xl mx-auto relative">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Left: copy */}
-          <div className="animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 bg-lime/10 text-lime text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-8">
-              <span className="w-1.5 h-1.5 bg-lime rounded-full animate-pulse" />
-              AI Chief of Staff — Now Available
-            </div>
-
-            <h1 className="font-bold text-navy leading-[1.1] mb-6" style={{ fontSize: 'clamp(2.4rem, 5vw, 3.5rem)', letterSpacing: '-0.02em' }}>
-              Be everywhere.<br />
-              Miss nothing.
-            </h1>
-
-            <p className="text-midgray text-lg leading-relaxed mb-8 max-w-lg">
-              Haelo reads every internal email, summarises it in three lines, drafts the right response, and sends it to your WhatsApp. You approve in one tap. Your team never waits.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 mb-12">
-              <Link href="/auth/signup" className="btn-primary text-base px-8 py-4">
-                Start free — 30 days
-                <ArrowRight size={18} />
-              </Link>
-              <a
-                href="https://wa.me/2349000000000?text=I'm%20interested%20in%20Haelo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary text-base px-8 py-4"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                Talk to us on WhatsApp
-              </a>
-            </div>
-
-            {/* Social proof */}
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-2">
-                {['A', 'K', 'T', 'O'].map((l, i) => (
-                  <div
-                    key={i}
-                    className="w-9 h-9 rounded-full border-2 border-offwhite flex items-center justify-center text-xs font-bold text-white"
-                    style={{ background: ['#0D1B2A', '#25D366', '#162338', '#1fb857'][i] }}
-                  >
-                    {l}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div className="flex gap-0.5 mb-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={12} className="fill-lime text-lime" />
-                  ))}
-                </div>
-                <p className="text-xs text-midgray font-bold">Trusted by executives across Nigeria</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: WhatsApp mockup */}
-          <div className="flex justify-center lg:justify-end">
-            <WhatsAppMessage className="animate-fade-in-up" />
-          </div>
-        </div>
-      </div>
-    </section>
-  )
+/* ─────────────────────────────────────────────
+   TOKENS
+───────────────────────────────────────────── */
+const T = {
+  navy:      '#0B1724',
+  navy2:     '#111f30',
+  lime:      '#25D366',
+  lime2:     '#1dba57',
+  offwhite:  '#F5F5F2',
+  white:     '#ffffff',
+  gray:      '#8A919E',
+  border:    'rgba(255,255,255,0.07)',
+  borderL:   '#E8E8E4',
 }
 
-// ── STATS BAR ─────────────────────────────────────────────────────────────────
-function StatsBar() {
-  const stats = [
-    { value: '<60s', label: 'Email to WhatsApp' },
-    { value: '90%+', label: 'Responses approved first try' },
-    { value: '<10 min', label: 'Daily inbox management' },
-    { value: '99.5%', label: 'Platform uptime' },
-  ]
+/* ─────────────────────────────────────────────
+   WHATSAPP ICON
+───────────────────────────────────────────── */
+const WA = ({ size = 18, color = 'currentColor' }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+)
 
+/* ─────────────────────────────────────────────
+   ANIMATED COUNTER
+───────────────────────────────────────────── */
+function Counter({ to, suffix = '', prefix = '' }: { to: number; suffix?: string; prefix?: string }) {
+  const [count, setCount] = useState(0)
+  const ref = useRef<HTMLSpanElement>(null)
+  const started = useRef(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !started.current) {
+        started.current = true
+        const duration = 1800
+        const start = performance.now()
+        const tick = (now: number) => {
+          const p = Math.min((now - start) / duration, 1)
+          const eased = 1 - Math.pow(1 - p, 4)
+          setCount(Math.floor(eased * to))
+          if (p < 1) requestAnimationFrame(tick)
+          else setCount(to)
+        }
+        requestAnimationFrame(tick)
+      }
+    }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [to])
+
+  return <span ref={ref}>{prefix}{count}{suffix}</span>
+}
+
+/* ─────────────────────────────────────────────
+   LOGO TICKER
+───────────────────────────────────────────── */
+const logos = [
+  {
+    name: 'Gmail',
+    svg: (
+      <svg viewBox="0 0 24 24" width="28" height="28">
+        <path fill="#EA4335" d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Outlook',
+    svg: (
+      <svg viewBox="0 0 24 24" width="28" height="28">
+        <path fill="#0078D4" d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.87.2t-.85-.2q-.35-.21-.57-.55-.22-.33-.33-.75-.1-.42-.1-.86t.1-.87q.1-.43.34-.76.22-.34.59-.54.36-.2.87-.2t.86.2q.35.21.57.55.22.34.31.77.1.43.1.88zM24 12v9.38q0 .46-.33.8-.33.32-.8.32H7.13q-.46 0-.8-.33-.32-.33-.32-.8V18H1q-.41 0-.7-.3-.3-.29-.3-.7V7q0-.41.3-.7Q.58 6 1 6h6V2.55q0-.44.3-.75.3-.3.75-.3h12.93q.44 0 .75.3.3.3.3.75V10.85l1.24.72h.01q.1.07.18.18.07.12.07.25zm-6-8.25v3h3zm4.01 6.83l-3.01-1.75v3.51z"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'WhatsApp',
+    svg: <WA size={28} color="#25D366" />,
+  },
+  {
+    name: 'Claude',
+    svg: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
+        <circle cx="12" cy="12" r="10" fill="#CC785C" opacity="0.15"/>
+        <circle cx="12" cy="12" r="10" stroke="#CC785C" strokeWidth="1.5" fill="none"/>
+        <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4" stroke="#CC785C" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Supabase',
+    svg: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
+        <path d="M11.9 2.4L3 14.6h6.3L8 21.6l13-9.6h-6.5L11.9 2.4z" fill="#3ECF8E"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Google Drive',
+    svg: (
+      <svg viewBox="0 0 24 24" width="28" height="28">
+        <path fill="#FBBC05" d="M4.56 15.54L7.8 21h8.4l-3.24-5.46z"/>
+        <path fill="#4285F4" d="M15.44 15.54L12 9.89 8.56 15.54z" opacity="0"/>
+        <path fill="#34A853" d="M12 3.27L4.56 15.54h6.88L18.88 3.27z" opacity="0"/>
+        <path fill="#EA4335" d="M8.56 15.54L5.12 9.89 12 3.27 8.56 15.54z" opacity="0"/>
+        <path fill="#4285F4" d="M12 3.27l6.88 12.27H18.44L12 3.27z"/>
+        <path fill="#34A853" d="M12 3.27L5.12 15.54H4.56L12 3.27z"/>
+        <path fill="#EA4335" d="M5.12 9.89l3.44 5.65-3.44-5.65z"/>
+        <path fill="#FBBC05" d="M4.56 15.54L7.8 21H16.2l-3.24-5.46H4.56z" opacity="0"/>
+        <polygon fill="#4285F4" points="18.88,15.54 12,3.27 18.44,15.54"/>
+        <polygon fill="#34A853" points="5.12,15.54 12,3.27 5.56,15.54"/>
+        <polygon fill="#FBBC05" points="4.56,15.54 7.8,21 16.2,21 12.96,15.54"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Termii',
+    svg: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="#0052CC" opacity="0.1"/>
+        <rect x="2" y="2" width="20" height="20" rx="6" stroke="#0052CC" strokeWidth="1.5" fill="none"/>
+        <path d="M8 12h8M12 8v8" stroke="#0052CC" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Zoho',
+    svg: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="#E4261C" opacity="0.1"/>
+        <rect x="2" y="2" width="20" height="20" rx="6" stroke="#E4261C" strokeWidth="1.5" fill="none"/>
+        <path d="M6 9l6 3 6-3" stroke="#E4261C" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M6 12l6 3 6-3" stroke="#E4261C" strokeWidth="1.5" strokeLinecap="round" opacity="0.5"/>
+      </svg>
+    ),
+  },
+]
+
+function LogoTicker() {
+  const items = [...logos, ...logos, ...logos]
   return (
-    <section className="bg-navy py-12 px-6">
-      <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-        {stats.map((s) => (
-          <div key={s.value} className="text-center">
-            <p className="text-3xl font-bold text-lime mb-1" style={{ letterSpacing: '-0.02em' }}>{s.value}</p>
-            <p className="text-xs font-bold text-white/50 uppercase tracking-wide">{s.label}</p>
+    <div style={{ overflow: 'hidden', position: 'relative', padding: '0' }}>
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: 120,
+        background: `linear-gradient(90deg, ${T.navy} 0%, transparent 100%)`,
+        zIndex: 2, pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', right: 0, top: 0, bottom: 0, width: 120,
+        background: `linear-gradient(270deg, ${T.navy} 0%, transparent 100%)`,
+        zIndex: 2, pointerEvents: 'none',
+      }} />
+      <div style={{
+        display: 'flex', gap: 0,
+        animation: 'ticker 30s linear infinite',
+        width: 'max-content',
+      }}>
+        {items.map((logo, i) => (
+          <div key={i} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+            padding: '0 40px', flexShrink: 0,
+          }}>
+            <div style={{ opacity: 0.7, transition: 'opacity 0.2s' }}>{logo.svg}</div>
+            <span style={{ fontSize: 11, fontWeight: 600, color: T.gray, letterSpacing: '0.04em' }}>{logo.name}</span>
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────
+   FADE IN HOOK
+───────────────────────────────────────────── */
+function useFadeIn(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVisible(true); obs.disconnect() }
+    }, { threshold })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [threshold])
+  return { ref, visible }
+}
+
+/* ─────────────────────────────────────────────
+   NAV
+───────────────────────────────────────────── */
+function Navbar() {
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 40)
+    window.addEventListener('scroll', fn)
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+  return (
+    <nav style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0 6%', height: 64,
+      background: scrolled ? 'rgba(11,23,36,0.96)' : 'transparent',
+      backdropFilter: scrolled ? 'blur(20px)' : 'none',
+      borderBottom: scrolled ? `1px solid ${T.border}` : '1px solid transparent',
+      transition: 'all 0.4s ease',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 8,
+          background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
+            <path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill="#0B1724"/>
+          </svg>
+        </div>
+        <span style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Haelo</span>
+      </div>
+      <div style={{ display: 'flex', gap: 36 }}>
+        {['How it works', 'Features', 'Pricing'].map((l) => (
+          <a key={l} href={`#${l.toLowerCase().replace(/ /g, '-')}`} style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.55)', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
+          >{l}</a>
+        ))}
+      </div>
+      <Link href="/auth/signup" style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        background: T.lime, color: T.navy,
+        fontSize: 13, fontWeight: 800,
+        padding: '9px 20px', borderRadius: 100,
+        textDecoration: 'none', letterSpacing: '-0.01em',
+        transition: 'transform 0.2s, background 0.2s',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
+        onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+      >
+        Start free
+        <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={T.navy} strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </Link>
+    </nav>
+  )
+}
+
+/* ─────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────── */
+function Hero() {
+  return (
+    <section style={{
+      minHeight: '100vh', background: T.navy,
+      display: 'flex', alignItems: 'center',
+      padding: '100px 6% 80px', position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Ambient orbs */}
+      <div style={{ position: 'absolute', top: '-20%', right: '-10%', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,211,102,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,211,102,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+      {/* Subtle grid */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)`,
+        backgroundSize: '60px 60px',
+      }} />
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative' }}>
+        {/* Left */}
+        <div style={{ animation: 'fadeUp 0.8s ease both' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            border: `1px solid rgba(37,211,102,0.25)`,
+            background: 'rgba(37,211,102,0.08)',
+            color: T.lime, fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            padding: '7px 14px', borderRadius: 100, marginBottom: 32,
+          }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: T.lime, display: 'inline-block', animation: 'blink 2s ease infinite' }} />
+            AI Chief of Staff
+          </div>
+
+          <h1 style={{
+            fontSize: 'clamp(3rem,5.5vw,5rem)',
+            fontWeight: 800, lineHeight: 1.04,
+            letterSpacing: '-0.04em', color: '#fff',
+            marginBottom: 24,
+          }}>
+            Be{' '}
+            <span style={{
+              background: `linear-gradient(120deg, ${T.lime} 0%, #7fffb0 100%)`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>everywhere.</span>
+            <br />Miss nothing.
+          </h1>
+
+          <p style={{ fontSize: 18, lineHeight: 1.72, color: 'rgba(255,255,255,0.5)', marginBottom: 40, maxWidth: 440, fontWeight: 400 }}>
+            Haelo reads every internal email, summarises it, drafts the reply using your company&apos;s own knowledge, and sends it to your WhatsApp. One tap. Done.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 52 }}>
+            <Link href="/auth/signup" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: T.lime, color: T.navy,
+              fontSize: 15, fontWeight: 800,
+              padding: '14px 28px', borderRadius: 100,
+              textDecoration: 'none', letterSpacing: '-0.01em',
+              transition: 'all 0.2s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 16px 40px rgba(37,211,102,0.3)` }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+            >
+              Start free — 30 days
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={T.navy} strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </Link>
+            <a href="https://wa.me/2349000000000" target="_blank" rel="noopener noreferrer" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 9,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: '#fff', fontSize: 15, fontWeight: 600,
+              padding: '14px 24px', borderRadius: 100,
+              textDecoration: 'none', transition: 'all 0.2s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+            >
+              <WA size={17} color={T.lime} />
+              Talk to us
+            </a>
+          </div>
+
+          {/* Social proof */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex' }}>
+              {[{ i: 'A', c: '#1a3a5c' }, { i: 'K', c: '#1d4a35' }, { i: 'T', c: '#2a1a4a' }, { i: 'O', c: '#1a2a4a' }].map((a, idx) => (
+                <div key={idx} style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  border: `2px solid ${T.navy}`, background: a.c,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.8)',
+                  marginLeft: idx === 0 ? 0 : -8,
+                }}>{a.i}</div>
+              ))}
+            </div>
+            <div>
+              <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
+                {[...Array(5)].map((_, i) => <span key={i} style={{ color: T.lime, fontSize: 12 }}>★</span>)}
+              </div>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>Trusted by execs across Nigeria</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: WA Mockup — clean, no hover overlays */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', animation: 'fadeUp 0.8s 0.2s ease both' }}>
+          <WAMockup />
+        </div>
+      </div>
     </section>
   )
 }
 
-// ── HOW IT WORKS ──────────────────────────────────────────────────────────────
-function HowItWorks() {
-  const steps = [
-    {
-      step: '01',
-      title: 'Email arrives',
-      description: 'A staff member sends an email to your company address. Haelo detects it in real time via your connected email provider.',
-    },
-    {
-      step: '02',
-      title: 'AI reads and understands',
-      description: 'Haelo reads the email, cross-references your Business Bible, and generates a contextual, accurate response grounded in how your business actually operates.',
-    },
-    {
-      step: '03',
-      title: 'WhatsApp notification',
-      description: 'You receive a structured WhatsApp message: sender name, role, a two-line summary, and a suggested response. Everything you need. Nothing you don\'t.',
-    },
-    {
-      step: '04',
-      title: 'You approve in one tap',
-      description: 'Reply YES to send immediately. Reply NO to provide a short instruction. Or do nothing — Haelo sends after your configured timer. Your team never waits.',
-    },
+/* ─────────────────────────────────────────────
+   WA MOCKUP (standalone, clean)
+───────────────────────────────────────────── */
+function WAMockup() {
+  return (
+    <div style={{
+      width: 300, borderRadius: 32,
+      boxShadow: '0 40px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
+      overflow: 'hidden', position: 'relative',
+      background: '#1a1a1a',
+    }}>
+      {/* Status bar */}
+      <div style={{ background: '#075e54', padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>9:41</span>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <svg width={14} height={10} viewBox="0 0 14 10" fill="white"><rect x="0" y="4" width="2" height="6" rx="1"/><rect x="3" y="2" width="2" height="8" rx="1"/><rect x="6" y="0" width="2" height="10" rx="1"/><rect x="9" y="1" width="2" height="9" rx="1"/></svg>
+            <svg width={14} height={10} viewBox="0 0 20 14" fill="white"><path d="M10 0C6.03 0 2.45 1.4 0 3.66l2.29 2.29C4.05 4.28 6.88 3 10 3s5.95 1.28 7.71 2.95L20 3.66C17.55 1.4 13.97 0 10 0zM10 6c-2.21 0-4.21.9-5.66 2.34L6.63 10.63C7.56 9.62 8.71 9 10 9s2.44.62 3.37 1.63l2.29-2.29C14.21 6.9 12.21 6 10 6zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            <div style={{ display: 'flex', gap: 1 }}>
+              <div style={{ width: 6, height: 10, borderRadius: 2, background: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>
+                <div style={{ width: '100%', height: '70%', borderRadius: 1, background: '#fff' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Chat header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: '50%', background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 20 20" fill="none" width={20} height={20}>
+              <path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill="#0B1724"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>Haelo</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>AI Chief of Staff · online</div>
+          </div>
+          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2} strokeLinecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </div>
+      </div>
+
+      {/* Chat body */}
+      <div style={{
+        background: '#ece5dd',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath opacity='.03' d='M0 0h80v80H0z'/%3E%3C/svg%3E")`,
+        padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 8,
+      }}>
+        {/* Date chip */}
+        <div style={{ textAlign: 'center', marginBottom: 4 }}>
+          <span style={{ fontSize: 11, background: 'rgba(0,0,0,0.15)', color: '#fff', padding: '3px 10px', borderRadius: 100, fontWeight: 600 }}>TODAY</span>
+        </div>
+
+        {/* Incoming bubble */}
+        <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', padding: '12px 14px', maxWidth: '94%', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+          {/* New message pill */}
+          <div style={{
+            display: 'inline-block',
+            background: 'rgba(37,211,102,0.12)', color: '#1a7a42',
+            fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+            padding: '3px 9px', borderRadius: 100, marginBottom: 10, border: '1px solid rgba(37,211,102,0.2)',
+          }}>
+            📧 New internal email
+          </div>
+
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#999', marginBottom: 2 }}>FROM</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 10 }}>Tosin Adeyemi <span style={{ fontWeight: 400, color: '#777' }}>· Ops Manager</span></div>
+
+          <div style={{ height: 1, background: '#f0f0f0', marginBottom: 10 }} />
+
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#999', marginBottom: 3 }}>SUMMARY</div>
+          <div style={{ fontSize: 13, lineHeight: 1.55, color: '#333', marginBottom: 10 }}>
+            Requesting approval to reorder 50kg of rice before Friday&apos;s service. Vendor confirmed availability.
+          </div>
+
+          <div style={{ height: 1, background: '#f0f0f0', marginBottom: 10 }} />
+
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#999', marginBottom: 3 }}>SUGGESTED REPLY</div>
+          <div style={{ fontSize: 13, lineHeight: 1.55, color: '#333', marginBottom: 12 }}>
+            Hi Tosin, approved — please proceed and send invoice for records.
+          </div>
+
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button style={{
+              flex: 1, padding: '8px 0', borderRadius: 10, border: 'none',
+              background: T.lime, color: '#fff',
+              fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: '-0.01em',
+            }}>✓ YES — Send</button>
+            <button style={{
+              flex: 1, padding: '8px 0', borderRadius: 10, border: '1px solid #e0e0e0',
+              background: '#fafafa', color: '#555',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}>✗ NO — Edit</button>
+          </div>
+
+          <div style={{ fontSize: 10, color: '#aaa', textAlign: 'right', marginTop: 8, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3 }}>
+            2m ago
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#34B7F1" strokeWidth={2.5} strokeLinecap="round"><path d="M1 12l5 5L12 5M8 12l5 5 7-12"/></svg>
+          </div>
+        </div>
+
+        {/* Outgoing sent */}
+        <div style={{ background: '#dcf8c6', borderRadius: '16px 4px 16px 16px', padding: '10px 14px', maxWidth: '85%', alignSelf: 'flex-end', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: '#111' }}>
+            Hi Tosin, approved — please proceed and send invoice for records.
+          </div>
+          <div style={{ fontSize: 10, color: '#aaa', textAlign: 'right', marginTop: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3 }}>
+            sent via Haelo
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#34B7F1" strokeWidth={2.5} strokeLinecap="round"><path d="M1 12l5 5L12 5M8 12l5 5 7-12"/></svg>
+          </div>
+        </div>
+
+        {/* Typing */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', borderRadius: '4px 16px 16px 16px', padding: '11px 14px', width: 68, boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}>
+          {[0, 0.18, 0.36].map((d, i) => (
+            <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#bbb', animation: `typingdot 1.2s ${d}s infinite` }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Input bar */}
+      <div style={{ background: '#f0f0f0', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flex: 1, background: '#fff', borderRadius: 24, padding: '8px 14px', fontSize: 13, color: '#999' }}>Message</div>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────
+   STATS
+───────────────────────────────────────────── */
+function Stats() {
+  const stats = [
+    { to: 60, suffix: 's', label: 'Email to WhatsApp', prefix: '<' },
+    { to: 90, suffix: '%+', label: 'Approved first try' },
+    { to: 10, suffix: ' min', label: 'Daily inbox time', prefix: '<' },
+    { to: 99, suffix: '.5%', label: 'Platform uptime' },
   ]
+  const { ref, visible } = useFadeIn()
 
   return (
-    <section id="how-it-works" className="py-24 px-6 bg-offwhite">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="section-label mb-4">How it works</p>
-          <h2 className="text-4xl font-bold text-navy mb-4" style={{ letterSpacing: '-0.02em' }}>
-            From email to WhatsApp in under 60 seconds
+    <div ref={ref} style={{ background: T.navy2, borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: '64px 6%' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0 }}>
+        {stats.map((s, i) => (
+          <div key={s.label} style={{
+            textAlign: 'center', padding: '0 32px',
+            borderRight: i < 3 ? `1px solid ${T.border}` : 'none',
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateY(0)' : 'translateY(20px)',
+            transition: `opacity 0.6s ${i * 0.1}s ease, transform 0.6s ${i * 0.1}s ease`,
+          }}>
+            <div style={{ fontSize: 'clamp(2.2rem,3vw,3rem)', fontWeight: 800, color: T.lime, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 8 }}>
+              {visible ? <Counter to={s.to} suffix={s.suffix} prefix={s.prefix ?? ''} /> : `${s.prefix ?? ''}0${s.suffix}`}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: T.gray, letterSpacing: '0.02em' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────
+   HOW IT WORKS
+───────────────────────────────────────────── */
+function HowItWorks() {
+  const steps = [
+    { n: '01', title: 'Email arrives', body: 'A staff member sends an email to your company address. Haelo intercepts it in real time.' },
+    { n: '02', title: 'AI understands', body: 'Your Business Bible tells Haelo who the sender is, what the context means, and how your company responds.' },
+    { n: '03', title: 'WhatsApp delivery', body: 'You receive a clean card: sender, summary, and a suggested reply — all in one WhatsApp message.' },
+    { n: '04', title: 'One tap', body: 'YES sends immediately. NO lets you redirect. Do nothing — Haelo auto-sends after your configured timer.' },
+  ]
+  const { ref, visible } = useFadeIn()
+
+  return (
+    <section id="how-it-works" style={{ padding: '120px 6%', background: T.navy }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ marginBottom: 80, textAlign: 'center' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime, marginBottom: 16 }}>How it works</p>
+          <h2 style={{ fontSize: 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: '#fff', marginBottom: 16, lineHeight: 1.1 }}>
+            From inbox to decision<br />in under 60 seconds.
           </h2>
-          <p className="text-midgray text-lg max-w-xl mx-auto">
-            No inbox. No stress. Just a WhatsApp message and one tap.
+          <p style={{ fontSize: 17, color: T.gray, maxWidth: 460, margin: '0 auto', lineHeight: 1.7 }}>
+            No app to check. No inbox to manage. Just your WhatsApp and one tap.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {steps.map((step, i) => (
-            <div key={i} className="relative">
-              <div className="card h-full">
-                <div className="text-4xl font-bold text-lime/30 mb-4" style={{ letterSpacing: '-0.02em' }}>{step.step}</div>
-                <h3 className="text-base font-bold text-navy mb-3">{step.title}</h3>
-                <p className="text-sm text-midgray leading-relaxed">{step.description}</p>
-              </div>
-              {i < steps.length - 1 && (
-                <ChevronRight
-                  size={20}
-                  className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-silver z-10"
-                />
-              )}
+        <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 1, background: T.border }}>
+          {steps.map((s, i) => (
+            <div key={s.n} style={{
+              background: T.navy, padding: '44px 32px',
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(24px)',
+              transition: `opacity 0.6s ${i * 0.12}s ease, transform 0.6s ${i * 0.12}s ease`,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = T.navy2 }}
+              onMouseLeave={e => { e.currentTarget.style.background = T.navy }}
+            >
+              <div style={{ fontSize: '2.4rem', fontWeight: 800, color: 'rgba(255,255,255,0.06)', letterSpacing: '-0.06em', marginBottom: 28, lineHeight: 1 }}>{s.n}</div>
+              <div style={{ width: 36, height: 2, background: T.lime, marginBottom: 24, borderRadius: 1 }} />
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.02em' }}>{s.title}</div>
+              <div style={{ fontSize: 14, lineHeight: 1.7, color: T.gray }}>{s.body}</div>
             </div>
           ))}
         </div>
 
-        {/* CTA to WhatsApp */}
-        <div className="mt-16 bg-navy rounded-2xl p-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-lime mb-2">Ready to see it in action?</p>
-            <h3 className="text-2xl font-bold text-white mb-2" style={{ letterSpacing: '-0.02em' }}>
-              Talk to Haelo directly on WhatsApp
-            </h3>
-            <p className="text-white/60 text-sm">We&apos;ll walk you through the product in real time.</p>
-          </div>
-          <a
-            href="https://wa.me/2349000000000?text=I'd%20like%20to%20learn%20more%20about%20Haelo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary shrink-0 text-base px-8 py-4"
+        {/* CTA strip */}
+        <div style={{
+          marginTop: 1, background: T.navy2,
+          padding: '32px 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24,
+          border: `1px solid ${T.border}`,
+        }}>
+          <p style={{ fontSize: 15, color: T.gray }}>Want to see it live? We&apos;ll walk you through in real time.</p>
+          <a href="https://wa.me/2349000000000" target="_blank" rel="noopener noreferrer" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 9,
+            background: T.lime, color: T.navy,
+            fontSize: 14, fontWeight: 800, padding: '12px 22px', borderRadius: 100,
+            textDecoration: 'none', flexShrink: 0, transition: 'all 0.2s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(37,211,102,0.25)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            Open WhatsApp
+            <WA size={16} color={T.navy} /> Open WhatsApp
           </a>
         </div>
       </div>
@@ -196,375 +599,224 @@ function HowItWorks() {
   )
 }
 
-// ── FEATURES ──────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────
+   FEATURES
+───────────────────────────────────────────── */
 function Features() {
   const features = [
-    {
-      icon: <Mail size={20} />,
-      title: 'Real-time email monitoring',
-      description: 'Haelo watches your inbox 24/7. Company domain emails only — all external emails ignored. Nothing slips through.',
-    },
-    {
-      icon: <Zap size={20} />,
-      title: 'AI response generation',
-      description: 'Every response grounded in your Business Bible. Contextual, appropriately toned, and accurate to how your business operates.',
-    },
-    {
-      icon: <MessageSquare size={20} />,
-      title: 'WhatsApp as the interface',
-      description: 'No new app. No new inbox. Everything happens on WhatsApp — the platform you already use every day without thinking.',
-    },
-    {
-      icon: <Clock size={20} />,
-      title: 'Configurable auto-send timer',
-      description: 'Three modes: Auto-Send, Remind & Wait, or Hybrid. Set globally or per staff member. You stay in control.',
-    },
-    {
-      icon: <BookOpen size={20} />,
-      title: 'Business Bible',
-      description: 'Upload your company context once. Haelo references it on every email — SOPs, team structure, decision rules, all of it.',
-    },
-    {
-      icon: <Users size={20} />,
-      title: 'Staff directory',
-      description: 'Every staff member recognised by name, role, and department. Bulk CSV import. Unrecognised sender queue.',
-    },
-    {
-      icon: <Activity size={20} />,
-      title: 'Full activity log',
-      description: 'Every email processed. Every response sent. Filter by date, sender, department. Full visibility at all times.',
-    },
-    {
-      icon: <Shield size={20} />,
-      title: 'Security by design',
-      description: 'OAuth only — no email passwords stored. Data encrypted at rest and in transit. Each client isolated. 30-day retention.',
-    },
+    { title: 'Real-time email monitoring', body: '24/7 watch on your company domain. Nothing external. Nothing missed.' },
+    { title: 'Business Bible', body: 'One upload. Every response after that is grounded in how your company actually operates.' },
+    { title: 'WhatsApp first', body: 'No new app. No new login. The interface is WhatsApp — the tool you already open 40 times a day.' },
+    { title: 'Configurable timer', body: 'Auto-Send, Remind & Wait, or Hybrid — set globally or per-sender. You are always in control.' },
+    { title: 'Staff directory', body: 'Every person recognised by name, role, and department. Bulk CSV import. Unknown-sender queue.' },
+    { title: 'Activity log', body: 'Every email. Every draft. Every outcome. Filter, export, and audit any time.' },
+    { title: 'AI response engine', body: 'Responses calibrated to context, tone, and your company knowledge — not generic LLM output.' },
+    { title: 'Security by design', body: 'OAuth only. No stored passwords. Encrypted at rest and in transit. 30-day retention. Per-client isolation.' },
   ]
+  const { ref, visible } = useFadeIn()
 
   return (
-    <section id="features" className="py-24 px-6 bg-white">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="section-label mb-4">Features</p>
-          <h2 className="text-4xl font-bold text-navy mb-4" style={{ letterSpacing: '-0.02em' }}>
-            Everything your team needs.<br />Nothing you don&apos;t.
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {features.map((f, i) => (
-            <div key={i} className="group card hover:border-lime/30 hover:shadow-elevated transition-all duration-200">
-              <div className="w-10 h-10 bg-lime/10 text-lime rounded-lg flex items-center justify-center mb-4 group-hover:bg-lime group-hover:text-navy transition-all duration-200">
-                {f.icon}
+    <section id="features" style={{ padding: '120px 6%', background: T.offwhite }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 80, alignItems: 'start' }}>
+          <div style={{ position: 'sticky', top: 100 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime2, marginBottom: 16 }}>Features</p>
+            <h2 style={{ fontSize: 'clamp(2rem,3vw,2.8rem)', fontWeight: 800, letterSpacing: '-0.035em', color: T.navy, lineHeight: 1.1, marginBottom: 20 }}>
+              Everything it takes.<br />Nothing it doesn&apos;t.
+            </h2>
+            <p style={{ fontSize: 16, color: T.gray, lineHeight: 1.7 }}>Eight components working as one. Built for executives who have no time to spare.</p>
+          </div>
+          <div ref={ref} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: T.borderL }}>
+            {features.map((f, i) => (
+              <div key={f.title} style={{
+                background: T.offwhite, padding: '32px 28px',
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0)' : 'translateY(20px)',
+                transition: `opacity 0.5s ${i * 0.06}s ease, transform 0.5s ${i * 0.06}s ease`,
+                cursor: 'default',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.background = T.offwhite }}
+              >
+                <div style={{ width: 28, height: 2, background: T.lime2, marginBottom: 20, borderRadius: 1 }} />
+                <div style={{ fontSize: 15, fontWeight: 800, color: T.navy, marginBottom: 8, letterSpacing: '-0.02em' }}>{f.title}</div>
+                <div style={{ fontSize: 13, color: T.gray, lineHeight: 1.7 }}>{f.body}</div>
               </div>
-              <h3 className="text-sm font-bold text-navy mb-2">{f.title}</h3>
-              <p className="text-xs text-midgray leading-relaxed">{f.description}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>
   )
 }
 
-// ── INTEGRATIONS ──────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────
+   INTEGRATIONS
+───────────────────────────────────────────── */
 function Integrations() {
-  const integrations = [
-    { name: 'Gmail', desc: 'Google OAuth 2.0' },
-    { name: 'Outlook', desc: 'Microsoft 365' },
-    { name: 'Zoho Mail', desc: 'Zoho OAuth' },
-    { name: 'WhatsApp', desc: 'Business API' },
-    { name: 'Claude AI', desc: 'Anthropic' },
-    { name: 'Supabase', desc: 'Vector DB' },
-    { name: 'Termii', desc: 'WhatsApp gateway' },
-    { name: 'Google Drive', desc: 'Bible upload' },
-  ]
-
-  // Platform logo SVG marks (simplified icon-style)
-  const logos: Record<string, React.ReactNode> = {
-    Gmail: (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-        <path d="M2 6C2 4.9 2.9 4 4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6z" stroke="#E2E2E0" strokeWidth="1.5"/>
-        <path d="M2 6l10 7 10-7" stroke="#EA4335" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    Outlook: (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-        <rect x="2" y="4" width="12" height="16" rx="2" fill="#0078D4" opacity="0.15" stroke="#0078D4" strokeWidth="1.5"/>
-        <rect x="10" y="7" width="12" height="12" rx="2" fill="#0078D4" opacity="0.3" stroke="#0078D4" strokeWidth="1.5"/>
-        <circle cx="6.5" cy="12" r="2.5" fill="#0078D4"/>
-      </svg>
-    ),
-    'Zoho Mail': (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-        <rect x="3" y="5" width="18" height="14" rx="2" fill="#E4261C" opacity="0.15" stroke="#E4261C" strokeWidth="1.5"/>
-        <path d="M7 9l5 3 5-3" stroke="#E4261C" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    WhatsApp: (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="#25D366">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-      </svg>
-    ),
-    'Claude AI': (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="#CC785C" strokeWidth="1.5"/>
-        <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4" stroke="#CC785C" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    Supabase: (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-        <path d="M12 3L3 8v8l9 5 9-5V8L12 3z" stroke="#3ECF8E" strokeWidth="1.5" strokeLinejoin="round"/>
-        <path d="M3 8l9 5 9-5" stroke="#3ECF8E" strokeWidth="1.5"/>
-        <path d="M12 13v8" stroke="#3ECF8E" strokeWidth="1.5"/>
-      </svg>
-    ),
-    Termii: (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-        <rect x="3" y="3" width="18" height="18" rx="4" stroke="#0052CC" strokeWidth="1.5"/>
-        <path d="M7 12h10M12 7v10" stroke="#0052CC" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    'Google Drive': (
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none">
-        <path d="M12 3L3 18h6l3-5 3 5h6L12 3z" stroke="#4285F4" strokeWidth="1.5" strokeLinejoin="round"/>
-        <path d="M3 18h18" stroke="#FBBC05" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M12 3l6 10" stroke="#EA4335" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-  }
-
+  const { ref, visible } = useFadeIn()
   return (
-    <section id="integrations" className="py-24 px-6 bg-offwhite">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="section-label mb-4">Integrations</p>
-          <h2 className="text-4xl font-bold text-navy mb-4" style={{ letterSpacing: '-0.02em' }}>
-            Works with the tools you already use
+    <section id="integrations" style={{ padding: '100px 0', background: T.navy, overflow: 'hidden' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto 56px', padding: '0 6%', textAlign: 'center' }}>
+        <div ref={ref} style={{
+          opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'opacity 0.6s ease, transform 0.6s ease',
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime, marginBottom: 16 }}>Integrations</p>
+          <h2 style={{ fontSize: 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: '#fff', marginBottom: 16, lineHeight: 1.1 }}>
+            Works with what you already use.
           </h2>
-          <p className="text-midgray text-lg max-w-xl mx-auto">
-            Haelo connects to your existing email provider in minutes. No migration. No disruption.
+          <p style={{ fontSize: 17, color: T.gray, maxWidth: 440, margin: '0 auto', lineHeight: 1.7 }}>
+            Connect your email in minutes. No migration. No IT ticket.
           </p>
         </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {integrations.map((intg) => (
-            <div key={intg.name} className="card flex flex-col items-center text-center gap-3 py-8 hover:border-lime/30 hover:shadow-elevated transition-all duration-200">
-              {logos[intg.name]}
-              <div>
-                <p className="text-sm font-bold text-navy">{intg.name}</p>
-                <p className="text-xs text-midgray mt-0.5">{intg.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-center text-sm text-midgray">
-          More integrations — including Slack and Zoho CRM — arriving in Version 2.0.
-        </p>
       </div>
+      <LogoTicker />
+      <p style={{ textAlign: 'center', fontSize: 13, color: T.gray, marginTop: 40, padding: '0 6%' }}>
+        Slack and Zoho CRM arriving in Version 2.0
+      </p>
     </section>
   )
 }
 
-// ── PRICING ───────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────
+   PRICING
+───────────────────────────────────────────── */
 function Pricing() {
   const plans = [
     {
-      name: 'Solo',
-      price: '₦150,000',
-      period: 'per month',
-      sub: '1 executive',
-      highlight: false,
-      cta: 'Start free trial',
-      ctaHref: '/auth/signup',
-      features: [
-        '1 executive WhatsApp account',
-        'Gmail, Outlook, or Zoho Mail',
-        'Business Bible up to 20 pages',
-        'Full dashboard access',
-        'Email activity log',
-        'Standard 10-minute timer',
-        'WhatsApp notification flow',
-      ],
+      name: 'Solo', price: '₦150,000', sub: '1 executive · per month', featured: false,
+      cta: 'Start free', href: '/auth/signup', external: false,
+      features: ['1 WhatsApp seat', 'Gmail, Outlook, or Zoho Mail', 'Business Bible — up to 20 pages', 'Full dashboard access', 'Activity log', 'Standard 10-min timer'],
     },
     {
-      name: 'Team',
-      price: '₦500,000',
-      period: 'per month',
-      sub: 'Up to 5 people',
-      highlight: true,
-      cta: 'Start free trial',
-      ctaHref: '/auth/signup',
-      features: [
-        'Up to 5 seats (CEO, HR, Ops, etc.)',
-        'All email providers',
-        'Unlimited Business Bible size',
-        'Custom timer per staff level',
-        'Shared team dashboard',
-        'Priority support',
-        'Monthly performance report',
-      ],
+      name: 'Team', price: '₦500,000', sub: 'Up to 5 people · per month', featured: true,
+      cta: 'Start free', href: '/auth/signup', external: false,
+      features: ['Up to 5 seats', 'All email providers', 'Unlimited Business Bible', 'Per-sender timer config', 'Shared dashboard', 'Priority support', 'Monthly report'],
     },
     {
-      name: 'Enterprise',
-      price: 'Contact Sales',
-      period: 'custom',
-      sub: '6+ people',
-      highlight: false,
-      cta: 'Talk to us on WhatsApp',
-      ctaHref: 'https://wa.me/2349000000000?text=I%27m%20interested%20in%20Enterprise',
-      external: true,
-      features: [
-        'Unlimited seats',
-        'Dedicated onboarding',
-        'Custom integrations & SLA',
-        'Bespoke Business Bible setup',
-        'Dedicated account manager',
-        'Annual contract options',
-        'White-glove support',
-      ],
+      name: 'Enterprise', price: 'Custom', sub: '6+ people · annual options', featured: false,
+      cta: 'Talk to us', href: 'https://wa.me/2349000000000', external: true,
+      features: ['Unlimited seats', 'Dedicated onboarding', 'Custom integrations & SLA', 'Bespoke Business Bible', 'Account manager', 'White-glove support'],
     },
   ]
+  const { ref, visible } = useFadeIn()
 
   return (
-    <section id="pricing" className="py-24 px-6 bg-white">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="section-label mb-4">Pricing</p>
-          <h2 className="text-4xl font-bold text-navy mb-4" style={{ letterSpacing: '-0.02em' }}>
+    <section id="pricing" style={{ padding: '120px 6%', background: T.offwhite }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 72 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime2, marginBottom: 16 }}>Pricing</p>
+          <h2 style={{ fontSize: 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: T.navy, marginBottom: 16, lineHeight: 1.1 }}>
             Flat rate. No surprises.
           </h2>
-          <p className="text-midgray text-lg max-w-xl mx-auto">
-            First 30 days free. Cancel any time.
+          <p style={{ fontSize: 17, color: T.gray, maxWidth: 400, margin: '0 auto', lineHeight: 1.7 }}>
+            First 30 days free on every plan. Cancel any time.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`rounded-2xl border flex flex-col relative ${
-                plan.highlight
-                  ? 'bg-navy border-navy text-white shadow-elevated'
-                  : 'bg-white border-border'
-              }`}
-            >
-              {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-lime text-navy text-xs font-bold px-4 py-1 rounded-full">Most popular</span>
-                </div>
+        <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: T.borderL }}>
+          {plans.map((plan, i) => (
+            <div key={plan.name} style={{
+              background: plan.featured ? T.navy : '#fff',
+              padding: '40px 32px',
+              position: 'relative',
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(20px)',
+              transition: `opacity 0.5s ${i * 0.12}s ease, transform 0.5s ${i * 0.12}s ease`,
+            }}>
+              {plan.featured && (
+                <div style={{
+                  position: 'absolute', top: 20, right: 20,
+                  background: T.lime, color: T.navy,
+                  fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  padding: '4px 12px', borderRadius: 100,
+                }}>Popular</div>
               )}
-
-              <div className="p-8 border-b border-white/10">
-                <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${plan.highlight ? 'text-lime' : 'text-lime'}`}>
-                  {plan.name}
-                </p>
-                <p className={`text-3xl font-bold mb-1 ${plan.highlight ? 'text-white' : 'text-navy'}`} style={{ letterSpacing: '-0.02em' }}>
-                  {plan.price}
-                </p>
-                <p className={`text-sm ${plan.highlight ? 'text-white/50' : 'text-midgray'}`}>
-                  {plan.period} · {plan.sub}
-                </p>
-              </div>
-
-              <div className="p-8 flex-1">
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5">
-                      <CheckCircle
-                        size={15}
-                        className={`shrink-0 mt-0.5 ${plan.highlight ? 'text-lime' : 'text-lime'}`}
-                      />
-                      <span className={`text-sm ${plan.highlight ? 'text-white/80' : 'text-midgray'}`}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {plan.external ? (
-                  <a
-                    href={plan.ctaHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-6 rounded-lg text-sm transition-all duration-200 ${
-                      plan.highlight
-                        ? 'bg-lime text-navy hover:bg-lime-hover'
-                        : 'bg-offwhite text-navy hover:bg-navy hover:text-white border border-border'
-                    }`}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.lime, marginBottom: 20 }}>{plan.name}</div>
+              <div style={{ fontSize: 'clamp(1.8rem,2.5vw,2.4rem)', fontWeight: 800, letterSpacing: '-0.04em', color: plan.featured ? '#fff' : T.navy, marginBottom: 4, lineHeight: 1 }}>{plan.price}</div>
+              <div style={{ fontSize: 13, color: plan.featured ? 'rgba(255,255,255,0.4)' : T.gray, marginBottom: 32 }}>{plan.sub}</div>
+              <div style={{ height: 1, background: plan.featured ? T.border : T.borderL, marginBottom: 28 }} />
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
+                {plan.features.map((f) => (
+                  <li key={f} style={{ display: 'flex', gap: 10, fontSize: 14, color: plan.featured ? 'rgba(255,255,255,0.65)' : T.gray, lineHeight: 1.4, alignItems: 'flex-start' }}>
+                    <svg width={16} height={16} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                      <circle cx="8" cy="8" r="8" fill="rgba(37,211,102,0.15)"/>
+                      <path d="M5 8l2 2 4-4" stroke={T.lime} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    {plan.cta}
-                  </a>
-                ) : (
-                  <Link
-                    href={plan.ctaHref}
-                    className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-6 rounded-lg text-sm transition-all duration-200 ${
-                      plan.highlight
-                        ? 'bg-lime text-navy hover:bg-lime-hover'
-                        : 'bg-offwhite text-navy hover:bg-navy hover:text-white border border-border'
-                    }`}
-                  >
-                    {plan.cta}
-                    <ArrowRight size={16} />
-                  </Link>
-                )}
-              </div>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              {plan.external ? (
+                <a href={plan.href} target="_blank" rel="noopener noreferrer" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  width: '100%', padding: '13px', borderRadius: 100,
+                  background: 'rgba(255,255,255,0.08)', color: '#fff',
+                  border: `1px solid rgba(255,255,255,0.12)`,
+                  fontSize: 14, fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em',
+                }}>
+                  <WA size={15} color="#fff" /> {plan.cta}
+                </a>
+              ) : (
+                <Link href={plan.href} style={{
+                  display: 'block', width: '100%', padding: 13, borderRadius: 100, textAlign: 'center',
+                  background: plan.featured ? T.lime : T.navy,
+                  color: plan.featured ? T.navy : '#fff',
+                  fontSize: 14, fontWeight: 800, textDecoration: 'none', letterSpacing: '-0.01em',
+                }}>
+                  {plan.cta} →
+                </Link>
+              )}
             </div>
           ))}
         </div>
-
-        <p className="text-center text-sm text-midgray mt-8">
-          All prices in Nigerian Naira. Global USD pricing available on request.
-        </p>
+        <p style={{ textAlign: 'center', fontSize: 13, color: T.gray, marginTop: 20 }}>All prices in Nigerian Naira. USD pricing on request.</p>
       </div>
     </section>
   )
 }
 
-// ── TESTIMONIALS ──────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────
+   TESTIMONIALS
+───────────────────────────────────────────── */
 function Testimonials() {
   const testimonials = [
-    {
-      quote: 'I used to spend two hours on internal emails every morning. Haelo handles all of it before I even sit down. My team gets faster responses than they ever did when I was doing it myself.',
-      name: 'Adaeze O.',
-      role: 'CEO, Retail Group — Lagos',
-    },
-    {
-      quote: 'The first time Haelo sent a response on my behalf and my Operations Manager said it was the fastest reply I\'d ever given, I knew this was different. Exactly right. Every time.',
-      name: 'Kunle A.',
-      role: 'MD, Construction Firm — Abuja',
-    },
-    {
-      quote: 'We deployed Haelo across five senior managers. Our internal response time dropped from two days to under fifteen minutes. The ROI was clear within the first week.',
-      name: 'Temi B.',
-      role: 'COO, Financial Services — Lagos',
-    },
+    { quote: 'I used to spend two hours on internal emails every morning. Haelo handles all of it before I even sit down.', name: 'Adaeze O.', role: 'CEO, Retail Group — Lagos', init: 'AO', bg: '#1a3040' },
+    { quote: "The first time Haelo replied for me, my Ops Manager said it was the fastest reply I'd ever given. Exactly right.", name: 'Kunle A.', role: 'MD, Construction — Abuja', init: 'KA', bg: '#1a3a28' },
+    { quote: 'Five senior managers. Response time dropped from two days to fifteen minutes. ROI was clear in week one.', name: 'Temi B.', role: 'COO, Financial Services — Lagos', init: 'TB', bg: '#2a1a40' },
   ]
+  const { ref, visible } = useFadeIn()
 
   return (
-    <section className="py-24 px-6 bg-offwhite">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="section-label mb-4">What executives say</p>
-          <h2 className="text-4xl font-bold text-navy" style={{ letterSpacing: '-0.02em' }}>
+    <section style={{ padding: '120px 6%', background: T.navy }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 72 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime, marginBottom: 16 }}>What executives say</p>
+          <h2 style={{ fontSize: 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: '#fff', lineHeight: 1.1 }}>
             Your team never waits.
           </h2>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div ref={ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: T.border }}>
           {testimonials.map((t, i) => (
-            <div key={i} className="card flex flex-col gap-4">
-              <div className="flex gap-0.5">
-                {[...Array(5)].map((_, j) => (
-                  <Star key={j} size={14} className="fill-lime text-lime" />
-                ))}
+            <div key={t.name} style={{
+              background: T.navy2, padding: '44px 36px',
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(24px)',
+              transition: `opacity 0.6s ${i * 0.12}s ease, transform 0.6s ${i * 0.12}s ease`,
+            }}>
+              <div style={{ display: 'flex', gap: 1, marginBottom: 28 }}>
+                {[...Array(5)].map((_, j) => <span key={j} style={{ color: T.lime, fontSize: 14 }}>★</span>)}
               </div>
-              <p className="text-sm text-nearblack leading-relaxed flex-1 italic">&ldquo;{t.quote}&rdquo;</p>
-              <div>
-                <p className="text-sm font-bold text-navy">{t.name}</p>
-                <p className="text-xs text-midgray">{t.role}</p>
+              <p style={{ fontSize: 16, lineHeight: 1.75, color: 'rgba(255,255,255,0.75)', marginBottom: 32, fontStyle: 'italic' }}>
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }}>{t.init}</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: T.gray }}>{t.role}</div>
+                </div>
               </div>
             </div>
           ))}
@@ -574,33 +826,54 @@ function Testimonials() {
   )
 }
 
-// ── FINAL CTA ─────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────
+   FINAL CTA
+───────────────────────────────────────────── */
 function FinalCTA() {
+  const { ref, visible } = useFadeIn()
   return (
-    <section className="py-24 px-6 bg-navy">
-      <div className="max-w-3xl mx-auto text-center">
-        <p className="section-label mb-6">Get started</p>
-        <h2 className="text-5xl font-bold text-white mb-6" style={{ letterSpacing: '-0.02em', lineHeight: 1.05 }}>
-          Your team deserves a response today.
+    <section style={{ padding: '140px 6%', background: T.offwhite, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 500, background: 'radial-gradient(ellipse, rgba(37,211,102,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div ref={ref} style={{
+        maxWidth: 680, margin: '0 auto', textAlign: 'center', position: 'relative',
+        opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(32px)',
+        transition: 'opacity 0.8s ease, transform 0.8s ease',
+      }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: T.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+          <svg viewBox="0 0 20 20" fill="none" width={24} height={24}>
+            <path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill={T.lime}/>
+          </svg>
+        </div>
+        <h2 style={{ fontSize: 'clamp(2.4rem,4.5vw,3.8rem)', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy, lineHeight: 1.06, marginBottom: 20 }}>
+          Your team deserves<br />a response today.
         </h2>
-        <p className="text-white/60 text-lg mb-10 max-w-xl mx-auto leading-relaxed">
-          First 30 days free. No credit card required. Set up in under 15 minutes.
+        <p style={{ fontSize: 18, color: T.gray, marginBottom: 44, lineHeight: 1.7 }}>
+          First 30 days free. No credit card required.<br />Set up in under 15 minutes.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/auth/signup" className="btn-primary text-base px-10 py-4">
-            Create your account
-            <ArrowRight size={18} />
-          </Link>
-          <a
-            href="https://wa.me/2349000000000?text=I%27m%20ready%20to%20start%20with%20Haelo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-white text-base px-10 py-4"
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link href="/auth/signup" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: T.navy, color: '#fff',
+            fontSize: 15, fontWeight: 800, padding: '15px 30px', borderRadius: 100,
+            textDecoration: 'none', letterSpacing: '-0.01em', transition: 'all 0.2s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 16px 48px rgba(11,23,36,0.2)` }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-lime">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            Start on WhatsApp
+            Create your account
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </Link>
+          <a href="https://wa.me/2349000000000" target="_blank" rel="noopener noreferrer" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 9,
+            background: 'transparent', color: T.lime2,
+            border: `1.5px solid rgba(29,186,87,0.3)`,
+            fontSize: 15, fontWeight: 800, padding: '15px 28px', borderRadius: 100,
+            textDecoration: 'none', transition: 'all 0.2s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = T.lime2; e.currentTarget.style.background = 'rgba(37,211,102,0.06)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(29,186,87,0.3)'; e.currentTarget.style.background = 'transparent' }}
+          >
+            <WA size={17} color={T.lime2} /> Start on WhatsApp
           </a>
         </div>
       </div>
@@ -608,20 +881,104 @@ function FinalCTA() {
   )
 }
 
-// ── PAGE ──────────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────── */
+function Footer() {
+  return (
+    <footer style={{ background: T.navy2, borderTop: `1px solid ${T.border}`, padding: '56px 6% 40px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 48, marginBottom: 52 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 16 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg viewBox="0 0 20 20" fill="none" width={14} height={14}><path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill={T.navy}/></svg>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Haelo</span>
+            </div>
+            <p style={{ fontSize: 14, color: T.gray, lineHeight: 1.65, maxWidth: 240 }}>
+              Be everywhere. Miss nothing. AI Chief of Staff for Nigerian executives.
+            </p>
+          </div>
+          {[
+            { h: 'Product', l: ['How it works', 'Features', 'Pricing', 'Integrations'] },
+            { h: 'Company', l: ['About', 'Blog', 'Careers', 'Contact'] },
+            { h: 'Legal', l: ['Privacy', 'Terms', 'Security'] },
+          ].map((col) => (
+            <div key={col.h}>
+              <h4 style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 18 }}>{col.h}</h4>
+              {col.l.map((l) => (
+                <a key={l} href="#" style={{ display: 'block', fontSize: 14, color: T.gray, textDecoration: 'none', marginBottom: 10, transition: 'color 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = T.gray)}
+                >{l}</a>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>© 2025 Haelo. All rights reserved.</p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Built in Lagos 🇳🇬</p>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+/* ─────────────────────────────────────────────
+   PAGE
+───────────────────────────────────────────── */
 export default function HomePage() {
   return (
-    <main>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(32px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.4; }
+        }
+        @keyframes typingdot {
+          0%, 80%, 100% { transform: translateY(0); }
+          40%           { transform: translateY(-5px); }
+        }
+        @keyframes ticker {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-33.333%); }
+        }
+
+        @media (max-width: 900px) {
+          .hero-grid   { grid-template-columns: 1fr !important; }
+          .stats-grid  { grid-template-columns: 1fr 1fr !important; }
+          .steps-grid  { grid-template-columns: 1fr 1fr !important; }
+          .feat-sticky { position: static !important; }
+          .feat-layout { grid-template-columns: 1fr !important; }
+          .plans-grid  { grid-template-columns: 1fr !important; }
+          .testi-grid  { grid-template-columns: 1fr !important; }
+          .footer-grid { grid-template-columns: 1fr 1fr !important; }
+          .int-logo-ticker { display: none; }
+          nav .nav-links { display: none; }
+        }
+      `}</style>
       <Navbar />
-      <Hero />
-      <StatsBar />
-      <HowItWorks />
-      <Features />
-      <Integrations />
-      <Pricing />
-      <Testimonials />
-      <FinalCTA />
+      <main>
+        <Hero />
+        <Stats />
+        <HowItWorks />
+        <Features />
+        <Integrations />
+        <Pricing />
+        <Testimonials />
+        <FinalCTA />
+      </main>
       <Footer />
-    </main>
+    </>
   )
 }

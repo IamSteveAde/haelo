@@ -25,10 +25,139 @@ const GLOBAL_CSS = `
 body,html{font-family:'Plus Jakarta Sans',sans-serif;background:${CREAM};color:${INK};-webkit-font-smoothing:antialiased}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}
-@keyframes slideDown{from{opacity:0;max-height:0;transform:translateY(-6px)}to{opacity:1;max-height:300px;transform:translateY(0)}}
+@keyframes slideDown{from{opacity:0;max-height:0;transform:translateY(-6px)}to{opacity:1;max-height:600px;transform:translateY(0)}}
 .fade-up{animation:fadeUp .38s cubic-bezier(.4,0,.2,1) both}
 .fade-in{animation:fadeIn .22s cubic-bezier(.4,0,.2,1) both}
 .slide-down{animation:slideDown .25s cubic-bezier(.4,0,.2,1) both;overflow:hidden}
+
+/* ── LAYOUT ── */
+.page-main{
+  flex:1;
+  padding:40px 40px 60px;
+  overflow-y:auto;
+  max-width:1200px;
+  margin:0 auto;
+  width:100%;
+}
+
+/* Page header row */
+.page-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:24px;
+  margin-bottom:32px;
+}
+
+/* Header action buttons row */
+.header-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-shrink:0;
+  flex-wrap:wrap;
+}
+
+/* Edit panel fields grid: 5 cols desktop → responsive */
+.edit-fields{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+  padding:20px 20px 16px;
+}
+
+/* Unrecognised row */
+.unrec-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 14px;
+}
+.unrec-actions{
+  display:flex;
+  gap:6px;
+  flex-shrink:0;
+}
+
+/* Table footer */
+.table-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:11px 20px;
+  background:${CREAM};
+  border-top:1px solid ${INK_10};
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+/* Table: hide lower-priority columns on small screens */
+.col-dept{ }
+.col-timer{ }
+.col-status{ }
+
+/* Edit panel actions */
+.edit-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 20px;
+  border-top:1px solid ${INK_06};
+  background:${CREAM};
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+/* ── TABLET: ≤ 900px ── */
+@media(max-width:900px){
+  .edit-fields{
+    grid-template-columns:repeat(3,1fr);
+  }
+  .col-dept td,.col-dept th{ display:none; }
+}
+
+/* ── MOBILE: ≤ 640px ── */
+@media(max-width:640px){
+  .page-main{
+    padding:24px 16px 48px !important;
+  }
+  .page-header{
+    flex-direction:column;
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .header-actions{
+    width:100%;
+    justify-content:flex-start;
+  }
+  .edit-fields{
+    grid-template-columns:1fr 1fr;
+  }
+  /* Hide Dept, Timer on mobile; keep Name, Role, Status, Actions */
+  .col-dept td,.col-dept th{ display:none; }
+  .col-timer td,.col-timer th{ display:none; }
+  .unrec-row{
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .unrec-email{
+    flex:1;
+    min-width:0;
+  }
+}
+
+/* ── SMALL MOBILE: ≤ 420px ── */
+@media(max-width:420px){
+  .edit-fields{
+    grid-template-columns:1fr;
+  }
+  /* Also hide Status col, leaving only Name + Actions */
+  .col-status td,.col-status th{ display:none; }
+  .header-actions .btn-export,
+  .header-actions .btn-import{
+    display:none;
+  }
+}
 `
 
 interface StaffMember {
@@ -52,8 +181,8 @@ const INITIAL_STAFF: StaffMember[] = [
 ]
 
 const UNRECOGNISED_INIT = [
-  { email: 'david@company.com',    received: '2h ago' },
-  { email: 'sarah.k@company.com',  received: '5h ago' },
+  { email: 'david@company.com',   received: '2h ago' },
+  { email: 'sarah.k@company.com', received: '5h ago' },
 ]
 
 const TIMER_OPTIONS = ['5 min', '10 min', '15 min', '20 min', '30 min']
@@ -62,7 +191,7 @@ function initials(name: string) {
   return name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
 }
 
-// ── SHARED INPUT ──────────────────────────────────────────────────────────────
+// ── FIELD INPUT ───────────────────────────────────────────────────────────────
 function FieldInput({ label, type = 'text', placeholder, value, onChange, small }: {
   label: string; type?: string; placeholder: string; value: string
   onChange: (v: string) => void; small?: boolean
@@ -70,7 +199,7 @@ function FieldInput({ label, type = 'text', placeholder, value, onChange, small 
   const [foc, setFoc] = useState(false)
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase' as const, color: INK_40, marginBottom: 5 }}>
+      <label style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase' as const, color:INK_40, marginBottom:5 }}>
         {label}
       </label>
       <input
@@ -78,13 +207,13 @@ function FieldInput({ label, type = 'text', placeholder, value, onChange, small 
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
         style={{
-          width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif",
+          width:'100%', fontFamily:"'Plus Jakarta Sans', sans-serif",
           background: foc ? WHITE : CREAM,
-          border: `1.5px solid ${foc ? INK : INK_10}`,
-          borderRadius: 10, padding: small ? '8px 12px' : '11px 14px',
-          fontSize: small ? 12 : 13, color: INK, outline: 'none',
+          border:`1.5px solid ${foc ? INK : INK_10}`,
+          borderRadius:10, padding: small ? '8px 12px' : '11px 14px',
+          fontSize: small ? 12 : 13, color:INK, outline:'none',
           boxShadow: foc ? `0 0 0 3px rgba(17,39,11,0.06)` : 'none',
-          transition: 'all .18s',
+          transition:'all .18s',
         }}
       />
     </div>
@@ -98,27 +227,27 @@ function SelectInput({ label, value, onChange, options }: {
   const [foc, setFoc] = useState(false)
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase' as const, color: INK_40, marginBottom: 5 }}>
+      <label style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase' as const, color:INK_40, marginBottom:5 }}>
         {label}
       </label>
-      <div style={{ position: 'relative' }}>
+      <div style={{ position:'relative' }}>
         <select
           value={value} onChange={e => onChange(e.target.value)}
           onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
           style={{
-            width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif",
+            width:'100%', fontFamily:"'Plus Jakarta Sans', sans-serif",
             background: foc ? WHITE : CREAM,
-            border: `1.5px solid ${foc ? INK : INK_10}`,
-            borderRadius: 10, padding: '8px 34px 8px 12px',
-            fontSize: 12, color: INK, outline: 'none', appearance: 'none',
-            WebkitAppearance: 'none', cursor: 'pointer',
+            border:`1.5px solid ${foc ? INK : INK_10}`,
+            borderRadius:10, padding:'8px 34px 8px 12px',
+            fontSize:12, color:INK, outline:'none', appearance:'none',
+            WebkitAppearance:'none', cursor:'pointer',
             boxShadow: foc ? `0 0 0 3px rgba(17,39,11,0.06)` : 'none',
-            transition: 'all .18s',
+            transition:'all .18s',
           }}
         >
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <svg style={{ position: 'absolute', right: 10, top: '50%', transform: `translateY(-50%) rotate(${foc ? '-180' : '0'}deg)`, pointerEvents: 'none', transition: 'transform .2s' }}
+        <svg style={{ position:'absolute', right:10, top:'50%', transform:`translateY(-50%) rotate(${foc ? '-180' : '0'}deg)`, pointerEvents:'none', transition:'transform .2s' }}
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={INK_40} strokeWidth="2.2" strokeLinecap="round">
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -128,21 +257,23 @@ function SelectInput({ label, value, onChange, options }: {
 }
 
 // ── BUTTONS ───────────────────────────────────────────────────────────────────
-function BtnGhost({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function BtnGhost({ onClick, children, className }: { onClick: () => void; children: React.ReactNode; className?: string }) {
   const [hov, setHov] = useState(false)
   return (
     <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: hov ? CREAM : 'transparent', border: `1.5px solid ${hov ? INK_20 : INK_10}`, borderRadius: 10, padding: '9px 16px', fontSize: 12, fontWeight: 600, color: hov ? INK : INK_60, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s' }}>
+      className={className}
+      style={{ display:'inline-flex', alignItems:'center', gap:6, background: hov ? CREAM : 'transparent', border:`1.5px solid ${hov ? INK_20 : INK_10}`, borderRadius:10, padding:'9px 14px', fontSize:12, fontWeight:600, color: hov ? INK : INK_60, cursor:'pointer', fontFamily:"'Plus Jakarta Sans', sans-serif", transition:'all .18s', whiteSpace:'nowrap' as const }}>
       {children}
     </button>
   )
 }
 
-function BtnInk({ onClick, children, disabled = false, small }: { onClick: () => void; children: React.ReactNode; disabled?: boolean; small?: boolean }) {
+function BtnInk({ onClick, children, disabled = false, small, className }: { onClick: () => void; children: React.ReactNode; disabled?: boolean; small?: boolean; className?: string }) {
   const [hov, setHov] = useState(false)
   return (
     <button onClick={onClick} disabled={disabled} onMouseEnter={() => !disabled && setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: disabled ? INK_20 : hov ? '#1a3a12' : INK, color: disabled ? INK_40 : '#fff', border: 'none', borderRadius: 10, padding: small ? '7px 14px' : '9px 16px', fontSize: small ? 11 : 12, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s', transform: hov && !disabled ? 'translateY(-1px)' : 'none', boxShadow: hov && !disabled ? '0 4px 14px rgba(17,39,11,0.2)' : 'none' }}>
+      className={className}
+      style={{ display:'inline-flex', alignItems:'center', gap:6, background: disabled ? INK_20 : hov ? '#1a3a12' : INK, color: disabled ? INK_40 : '#fff', border:'none', borderRadius:10, padding: small ? '7px 12px' : '9px 14px', fontSize: small ? 11 : 12, fontWeight:600, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily:"'Plus Jakarta Sans', sans-serif", transition:'all .18s', transform: hov && !disabled ? 'translateY(-1px)' : 'none', boxShadow: hov && !disabled ? '0 4px 14px rgba(17,39,11,0.2)' : 'none', whiteSpace:'nowrap' as const }}>
       {children}
     </button>
   )
@@ -152,7 +283,7 @@ function BtnDanger({ onClick, children }: { onClick: () => void; children: React
   const [hov, setHov] = useState(false)
   return (
     <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: hov ? 'rgba(192,57,43,0.08)' : 'transparent', border: `1.5px solid ${hov ? 'rgba(192,57,43,0.25)' : INK_10}`, borderRadius: 10, padding: '9px 16px', fontSize: 12, fontWeight: 600, color: hov ? '#C0392B' : INK_60, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s' }}>
+      style={{ display:'inline-flex', alignItems:'center', gap:6, background: hov ? 'rgba(192,57,43,0.08)' : 'transparent', border:`1.5px solid ${hov ? 'rgba(192,57,43,0.25)' : INK_10}`, borderRadius:10, padding:'9px 14px', fontSize:12, fontWeight:600, color: hov ? '#C0392B' : INK_60, cursor:'pointer', fontFamily:"'Plus Jakarta Sans', sans-serif", transition:'all .18s', whiteSpace:'nowrap' as const }}>
       {children}
     </button>
   )
@@ -162,12 +293,12 @@ function BtnDanger({ onClick, children }: { onClick: () => void; children: React
 function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [foc, setFoc] = useState(false)
   return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-      <Search size={14} color={INK_40} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+    <div style={{ position:'relative', flex:1, minWidth:0 }}>
+      <Search size={14} color={INK_40} style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
       <input type="text" placeholder="Search by name, role, or department…" value={value}
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
-        style={{ width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif", background: foc ? WHITE : CREAM, border: `1.5px solid ${foc ? INK : INK_10}`, borderRadius: 10, padding: '10px 14px 10px 40px', fontSize: 13, color: INK, outline: 'none', boxShadow: foc ? `0 0 0 3px rgba(17,39,11,0.06)` : 'none', transition: 'all .18s' }} />
+        style={{ width:'100%', fontFamily:"'Plus Jakarta Sans', sans-serif", background: foc ? WHITE : CREAM, border:`1.5px solid ${foc ? INK : INK_10}`, borderRadius:10, padding:'10px 14px 10px 40px', fontSize:13, color:INK, outline:'none', boxShadow: foc ? `0 0 0 3px rgba(17,39,11,0.06)` : 'none', transition:'all .18s' }} />
     </div>
   )
 }
@@ -177,102 +308,82 @@ function UnrecognisedRow({ u, onAdd, onDismiss }: { u: { email: string; received
   const [hov, setHov] = useState(false)
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: hov ? WHITE : CREAM, border: `1.5px solid ${hov ? AMBER_BORDER : 'rgba(180,83,9,0.1)'}`, borderRadius: 11, transition: 'all .18s', boxShadow: hov ? '0 4px 14px rgba(180,83,9,0.07)' : 'none' }}>
-      <div style={{ width: 32, height: 32, background: AMBER_BG, border: `1px solid ${AMBER_BORDER}`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14, fontWeight: 700, color: AMBER }}>?</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 1 }}>{u.email}</p>
-        <p style={{ fontSize: 11, color: INK_40 }}>Received {u.received}</p>
+      className="unrec-row"
+      style={{ background: hov ? WHITE : CREAM, border:`1.5px solid ${hov ? AMBER_BORDER : 'rgba(180,83,9,0.1)'}`, borderRadius:11, transition:'all .18s', boxShadow: hov ? '0 4px 14px rgba(180,83,9,0.07)' : 'none' }}>
+      <div style={{ width:32, height:32, background:AMBER_BG, border:`1px solid ${AMBER_BORDER}`, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:14, fontWeight:700, color:AMBER }}>?</div>
+      <div className="unrec-email" style={{ flex:1, minWidth:0 }}>
+        <p style={{ fontSize:13, fontWeight:700, color:INK, marginBottom:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.email}</p>
+        <p style={{ fontSize:11, color:INK_40 }}>Received {u.received}</p>
       </div>
-      <BtnInk onClick={onAdd} small><Plus size={12} /> Add</BtnInk>
-      <BtnGhost onClick={onDismiss}>Dismiss</BtnGhost>
+      <div className="unrec-actions">
+        <BtnInk onClick={onAdd} small><Plus size={12} /> Add</BtnInk>
+        <BtnGhost onClick={onDismiss}>Dismiss</BtnGhost>
+      </div>
     </div>
   )
 }
 
-// ── EDIT PANEL (inline, expands below the row) ────────────────────────────────
-function EditPanel({ staff, onSave, onCancel, onToggleStatus }: {
-  staff: StaffMember
-  onSave: (updated: StaffMember) => void
-  onCancel: () => void
-  onToggleStatus: () => void
+// ── EDIT PANEL ────────────────────────────────────────────────────────────────
+function EditPanel({ staff, onSave, onCancel }: {
+  staff: StaffMember; onSave: (updated: StaffMember) => void; onCancel: () => void
 }) {
   const [form, setForm] = useState({
-    name:   staff.name,
-    role:   staff.role,
-    dept:   staff.dept,
-    email:  staff.email,
-    timer:  staff.timer,
-    status: staff.status,
+    name: staff.name, role: staff.role, dept: staff.dept,
+    email: staff.email, timer: staff.timer, status: staff.status,
   })
 
   const changed = (
     form.name !== staff.name || form.role !== staff.role ||
-    form.dept !== staff.dept || form.email !== staff.email ||
-    form.timer !== staff.timer
+    form.dept !== staff.dept || form.email !== staff.email || form.timer !== staff.timer
   )
-
-  const handleSave = () => {
-    // TODO: POST to /api/staff/:id with form data
-    onSave({ ...staff, ...form })
-  }
 
   return (
     <tr className="slide-down">
-      <td colSpan={6} style={{ padding: 0, background: 'transparent' }}>
-        <div style={{ margin: '0 0 2px', background: WHITE, border: `1.5px solid ${INK_10}`, borderRadius: 14, overflow: 'hidden' }}>
+      <td colSpan={6} style={{ padding:0, background:'transparent' }}>
+        <div style={{ margin:'0 0 2px', background:WHITE, border:`1.5px solid ${INK_10}`, borderRadius:14, overflow:'hidden' }}>
           {/* Edit header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: `1px solid ${INK_06}`, background: CREAM }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, background: INK, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', borderBottom:`1px solid ${INK_06}`, background:CREAM, flexWrap:'wrap' as const, gap:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:32, height:32, background:INK, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#fff', flexShrink:0 }}>
                 {initials(staff.name)}
               </div>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: INK }}>Editing {staff.name}</p>
-                <p style={{ fontSize: 11, color: INK_40 }}>Changes saved immediately to the staff directory</p>
+              <div style={{ minWidth:0 }}>
+                <p style={{ fontSize:13, fontWeight:700, color:INK }}>Editing {staff.name}</p>
+                <p style={{ fontSize:11, color:INK_40 }}>Changes saved immediately to the staff directory</p>
               </div>
             </div>
             <button onClick={onCancel}
-              style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${INK_10}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              style={{ width:30, height:30, borderRadius:8, border:`1px solid ${INK_10}`, background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all .15s', flexShrink:0 }}
               onMouseEnter={e => (e.currentTarget.style.background = CREAM)}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <X size={13} color={INK_40} />
             </button>
           </div>
 
-          {/* Fields grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 16, padding: '20px 20px 16px' }}>
-            <FieldInput label="Full name"   placeholder="Full name"   value={form.name}  onChange={v => setForm(f => ({ ...f, name: v }))}  small />
-            <FieldInput label="Role"        placeholder="Role"        value={form.role}  onChange={v => setForm(f => ({ ...f, role: v }))}  small />
-            <FieldInput label="Department"  placeholder="Department"  value={form.dept}  onChange={v => setForm(f => ({ ...f, dept: v }))}  small />
-            <FieldInput label="Email"       placeholder="Email"       value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} small type="email" />
-            <SelectInput label="Timer" value={form.timer} onChange={v => setForm(f => ({ ...f, timer: v }))} options={TIMER_OPTIONS} />
+          {/* Fields */}
+          <div className="edit-fields">
+            <FieldInput label="Full name"  placeholder="Full name"  value={form.name}  onChange={v => setForm(f => ({ ...f, name:v }))}  small />
+            <FieldInput label="Role"       placeholder="Role"       value={form.role}  onChange={v => setForm(f => ({ ...f, role:v }))}  small />
+            <FieldInput label="Department" placeholder="Department" value={form.dept}  onChange={v => setForm(f => ({ ...f, dept:v }))}  small />
+            <FieldInput label="Email"      placeholder="Email"      value={form.email} onChange={v => setForm(f => ({ ...f, email:v }))} small type="email" />
+            <SelectInput label="Timer" value={form.timer} onChange={v => setForm(f => ({ ...f, timer:v }))} options={TIMER_OPTIONS} />
           </div>
 
-          {/* Actions row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderTop: `1px solid ${INK_06}`, background: CREAM }}>
-            {/* Left: status toggle */}
+          {/* Actions */}
+          <div className="edit-actions">
             <button
               onClick={() => setForm(f => ({ ...f, status: f.status === 'active' ? 'inactive' : 'active' }))}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600,
-                padding: '6px 12px', borderRadius: 9, border: `1px solid ${INK_10}`,
-                background: 'transparent', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif",
-                color: form.status === 'active' ? INK_60 : '#C0392B',
-                transition: 'all .18s',
-              }}
+              style={{ display:'inline-flex', alignItems:'center', gap:7, fontSize:11, fontWeight:600, padding:'6px 12px', borderRadius:9, border:`1px solid ${INK_10}`, background:'transparent', cursor:'pointer', fontFamily:"'Plus Jakarta Sans', sans-serif", color: form.status === 'active' ? INK_60 : '#C0392B', transition:'all .18s', whiteSpace:'nowrap' as const }}
               onMouseEnter={e => (e.currentTarget.style.background = WHITE)}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: form.status === 'active' ? GREEN : '#C0392B', flexShrink: 0 }} />
+              <span style={{ width:7, height:7, borderRadius:'50%', background: form.status === 'active' ? GREEN : '#C0392B', flexShrink:0 }} />
               {form.status === 'active' ? 'Mark as inactive' : 'Mark as active'}
             </button>
-
-            {/* Right: cancel + save */}
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display:'flex', gap:8 }}>
               <BtnGhost onClick={onCancel}>Cancel</BtnGhost>
-              <BtnInk onClick={handleSave} disabled={!changed} small>
-                <Save size={12} />
-                {changed ? 'Save changes' : 'No changes'}
+              <BtnInk onClick={() => onSave({ ...staff, ...form })} disabled={!changed} small>
+                <Save size={12} />{changed ? 'Save changes' : 'No changes'}
               </BtnInk>
             </div>
           </div>
@@ -286,9 +397,9 @@ function EditPanel({ staff, onSave, onCancel, onToggleStatus }: {
 function StaffRow({ s, isEditing, onEditToggle, onDelete }: {
   s: StaffMember; isEditing: boolean; onEditToggle: () => void; onDelete: () => void
 }) {
-  const [hov, setHov] = useState(false)
-  const [delHov, setDelHov] = useState(false)
-  const [editHov, setEditHov] = useState(false)
+  const [hov,      setHov]      = useState(false)
+  const [delHov,   setDelHov]   = useState(false)
+  const [editHov,  setEditHov]  = useState(false)
 
   return (
     <tr
@@ -296,67 +407,60 @@ function StaffRow({ s, isEditing, onEditToggle, onDelete }: {
       onMouseLeave={() => setHov(false)}
       style={{
         background: isEditing ? CREAM : hov ? CREAM : WHITE,
-        transition: 'background .15s',
-        borderBottom: `1px solid ${INK_06}`,
+        transition:'background .15s',
+        borderBottom:`1px solid ${INK_06}`,
         borderLeft: isEditing ? `3px solid ${INK}` : '3px solid transparent',
       }}
     >
-      <td style={{ padding: '13px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <div style={{ width: 34, height: 34, background: hov || isEditing ? INK : INK_06, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: hov || isEditing ? '#fff' : INK_40, flexShrink: 0, transition: 'all .2s', letterSpacing: '.02em' }}>
+      {/* Name */}
+      <td style={{ padding:'13px 16px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:34, height:34, background: hov || isEditing ? INK : INK_06, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color: hov || isEditing ? '#fff' : INK_40, flexShrink:0, transition:'all .2s' }}>
             {initials(s.name)}
           </div>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 1 }}>{s.name}</p>
-            <p style={{ fontSize: 11, color: INK_40 }}>{s.email}</p>
+          <div style={{ minWidth:0 }}>
+            <p style={{ fontSize:13, fontWeight:700, color:INK, marginBottom:1 }}>{s.name}</p>
+            <p style={{ fontSize:11, color:INK_40, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.email}</p>
           </div>
         </div>
       </td>
-      <td style={{ padding: '13px 20px', fontSize: 12, color: INK_60, fontWeight: 500 }}>{s.role}</td>
-      <td style={{ padding: '13px 20px', fontSize: 12, color: INK_60, fontWeight: 500 }}>{s.dept}</td>
-      <td style={{ padding: '13px 20px' }}>
-        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: INK_06, color: INK_60 }}>{s.timer}</span>
+
+      {/* Role */}
+      <td style={{ padding:'13px 16px', fontSize:12, color:INK_60, fontWeight:500 }}>{s.role}</td>
+
+      {/* Dept — hidden on mobile via CSS */}
+      <td className="col-dept" style={{ padding:'13px 16px', fontSize:12, color:INK_60, fontWeight:500 }}>{s.dept}</td>
+
+      {/* Timer — hidden on mobile */}
+      <td className="col-timer" style={{ padding:'13px 16px' }}>
+        <span style={{ fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:20, background:INK_06, color:INK_60 }}>{s.timer}</span>
       </td>
-      <td style={{ padding: '13px 20px' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: s.status === 'active' ? GREEN_BG : INK_06, color: s.status === 'active' ? GREEN : INK_40 }}>
+
+      {/* Status */}
+      <td className="col-status" style={{ padding:'13px 16px' }}>
+        <span style={{ fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:20, background: s.status === 'active' ? GREEN_BG : INK_06, color: s.status === 'active' ? GREEN : INK_40 }}>
           {s.status === 'active' ? 'Active' : 'Inactive'}
         </span>
       </td>
-      <td style={{ padding: '13px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-          {/* EDIT BUTTON */}
+
+      {/* Actions */}
+      <td style={{ padding:'13px 16px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:4, justifyContent:'flex-end' }}>
           <button
             onClick={onEditToggle}
             onMouseEnter={() => setEditHov(true)}
             onMouseLeave={() => setEditHov(false)}
             title={isEditing ? 'Close editor' : 'Edit staff member'}
-            style={{
-              width: 30, height: 30, borderRadius: 8,
-              border: `1px solid ${isEditing ? INK_20 : editHov ? INK_20 : 'transparent'}`,
-              background: isEditing ? INK : editHov ? WHITE : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', transition: 'all .15s',
-            }}
+            style={{ width:30, height:30, borderRadius:8, border:`1px solid ${isEditing ? INK_20 : editHov ? INK_20 : 'transparent'}`, background: isEditing ? INK : editHov ? WHITE : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all .15s' }}
           >
-            {isEditing
-              ? <X size={13} color="#fff" />
-              : <Edit2 size={13} color={editHov ? INK : INK_40} />
-            }
+            {isEditing ? <X size={13} color="#fff" /> : <Edit2 size={13} color={editHov ? INK : INK_40} />}
           </button>
-
-          {/* DELETE BUTTON */}
           <button
             onClick={onDelete}
             onMouseEnter={() => setDelHov(true)}
             onMouseLeave={() => setDelHov(false)}
             title="Remove staff member"
-            style={{
-              width: 30, height: 30, borderRadius: 8,
-              border: `1px solid ${delHov ? 'rgba(192,57,43,0.2)' : 'transparent'}`,
-              background: delHov ? 'rgba(192,57,43,0.06)' : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', transition: 'all .15s',
-            }}
+            style={{ width:30, height:30, borderRadius:8, border:`1px solid ${delHov ? 'rgba(192,57,43,0.2)' : 'transparent'}`, background: delHov ? 'rgba(192,57,43,0.06)' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all .15s' }}
           >
             <Trash2 size={13} color={delHov ? '#C0392B' : INK_40} />
           </button>
@@ -366,39 +470,49 @@ function StaffRow({ s, isEditing, onEditToggle, onDelete }: {
   )
 }
 
+// ── STAFF CARD (mobile alternative to table row) ──────────────────────────────
+// Shown below 420px via CSS display switching — simple card layout
+function StaffCard({ s, isEditing, onEditToggle, onDelete }: {
+  s: StaffMember; isEditing: boolean; onEditToggle: () => void; onDelete: () => void
+}) {
+  return null // We handle this purely via table column hiding + overflow scroll
+}
+
 // ── ADD MODAL ─────────────────────────────────────────────────────────────────
 function AddModal({ onClose, onAdd }: {
   onClose: () => void
   onAdd: (s: { name: string; role: string; email: string; dept: string }) => void
 }) {
-  const [form, setForm] = useState({ name: '', role: '', email: '', dept: '' })
+  const [form, setForm] = useState({ name:'', role:'', email:'', dept:'' })
   const valid = form.name.trim() && form.role.trim() && form.email.trim() && form.dept.trim()
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, backdropFilter: 'blur(2px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="fade-in" style={{ background: WHITE, borderRadius: 18, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 24px 64px rgba(10,22,40,0.22)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+    <div
+      style={{ position:'fixed', inset:0, background:'rgba(10,22,40,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20, backdropFilter:'blur(2px)' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="fade-in" style={{ background:WHITE, borderRadius:18, padding:28, width:'100%', maxWidth:440, boxShadow:'0 24px 64px rgba(10,22,40,0.22)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
           <div>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: GOLD, marginBottom: 4 }}>Staff Directory</p>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, letterSpacing: '-0.02em' }}>Add staff member</h2>
+            <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase' as const, color:GOLD, marginBottom:4 }}>Staff Directory</p>
+            <h2 style={{ fontSize:18, fontWeight:800, color:INK, letterSpacing:'-0.02em' }}>Add staff member</h2>
           </div>
           <button onClick={onClose}
-            style={{ width: 32, height: 32, borderRadius: 9, border: `1.5px solid ${INK_10}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all .15s' }}
+            style={{ width:32, height:32, borderRadius:9, border:`1.5px solid ${INK_10}`, background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all .15s', flexShrink:0 }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = CREAM; (e.currentTarget as HTMLButtonElement).style.borderColor = INK_20 }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.borderColor = INK_10 }}>
             <X size={15} color={INK_40} />
           </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
-          <FieldInput label="Full name"     placeholder="Amara Okafor"       value={form.name}  onChange={v => setForm(f => ({ ...f, name: v }))} />
-          <FieldInput label="Role"          placeholder="Marketing Manager"   value={form.role}  onChange={v => setForm(f => ({ ...f, role: v }))} />
-          <FieldInput label="Email address" placeholder="amara@company.com"  value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} type="email" />
-          <FieldInput label="Department"    placeholder="Marketing"           value={form.dept}  onChange={v => setForm(f => ({ ...f, dept: v }))} />
+        <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:24 }}>
+          <FieldInput label="Full name"     placeholder="Amara Okafor"      value={form.name}  onChange={v => setForm(f => ({ ...f, name:v }))} />
+          <FieldInput label="Role"          placeholder="Marketing Manager"  value={form.role}  onChange={v => setForm(f => ({ ...f, role:v }))} />
+          <FieldInput label="Email address" placeholder="amara@company.com" value={form.email} onChange={v => setForm(f => ({ ...f, email:v }))} type="email" />
+          <FieldInput label="Department"    placeholder="Marketing"          value={form.dept}  onChange={v => setForm(f => ({ ...f, dept:v }))} />
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display:'flex', gap:10 }}>
           <BtnGhost onClick={onClose}>Cancel</BtnGhost>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex:1 }}>
             <BtnInk onClick={() => { if (valid) { onAdd(form); onClose() } }} disabled={!valid}>
               <CheckCircle size={13} /> Add staff member
             </BtnInk>
@@ -426,7 +540,7 @@ export default function StaffPage() {
   )
 
   const addStaff = (form: { name: string; role: string; email: string; dept: string }) => {
-    setStaff(prev => [...prev, { id: Date.now(), ...form, status: 'active', timer: '10 min' }])
+    setStaff(prev => [...prev, { id: Date.now(), ...form, status:'active', timer:'10 min' }])
   }
 
   const saveStaff = (updated: StaffMember) => {
@@ -450,7 +564,7 @@ export default function StaffPage() {
   }
 
   const downloadCSV = () => {
-    const cols = ['Name', 'Role', 'Department', 'Email', 'Status', 'Timer']
+    const cols = ['Name','Role','Department','Email','Status','Timer']
     const rows = staff.map(s => [s.name, s.role, s.dept, s.email, s.status, s.timer])
     const csv = [cols.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n')
     const a = document.createElement('a')
@@ -463,30 +577,30 @@ export default function StaffPage() {
       <style>{GLOBAL_CSS}</style>
       {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={addStaff} />}
 
-      <main style={{ flex: 1, padding: '40px 40px 60px', overflowY: 'auto', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+      <main className="page-main">
 
         {/* HEADER */}
-        <div className="fade-up" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, marginBottom: 32 }}>
+        <div className="page-header fade-up">
           <div>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: GOLD, marginBottom: 6 }}>Staff Directory</p>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: INK, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 4 }}>Your team.</h1>
-            <p style={{ fontSize: 13, color: INK_60, fontWeight: 500 }}>
+            <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:GOLD, marginBottom:6 }}>Staff Directory</p>
+            <h1 style={{ fontSize:26, fontWeight:800, color:INK, letterSpacing:'-0.03em', lineHeight:1.1, marginBottom:4 }}>Your team.</h1>
+            <p style={{ fontSize:13, color:INK_60, fontWeight:500 }}>
               Every person Haelo recognises.{' '}
-              <strong style={{ color: INK }}>{staff.length} members</strong> in your directory.
+              <strong style={{ color:INK }}>{staff.length} members</strong> in your directory.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <BtnGhost onClick={downloadCSV}><Download size={13} /> Export CSV</BtnGhost>
-            <BtnGhost onClick={() => {}}><Upload size={13} /> Import CSV</BtnGhost>
+          <div className="header-actions">
+            <BtnGhost onClick={downloadCSV} className="btn-export"><Download size={13} /> Export CSV</BtnGhost>
+            <BtnGhost onClick={() => {}} className="btn-import"><Upload size={13} /> Import CSV</BtnGhost>
             <BtnInk onClick={() => setShowAdd(true)}><Plus size={13} /> Add staff</BtnInk>
           </div>
         </div>
 
         {/* SAVED TOAST */}
         {savedId !== null && (
-          <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 16px', background: GREEN_BG, border: `1.5px solid rgba(46,125,82,0.2)`, borderRadius: 11, marginBottom: 16 }}>
+          <div className="fade-in" style={{ display:'flex', alignItems:'center', gap:9, padding:'11px 16px', background:GREEN_BG, border:`1.5px solid rgba(46,125,82,0.2)`, borderRadius:11, marginBottom:16 }}>
             <CheckCircle size={14} color={GREEN} />
-            <p style={{ fontSize: 12, fontWeight: 600, color: GREEN }}>
+            <p style={{ fontSize:12, fontWeight:600, color:GREEN }}>
               Changes saved — {staff.find(s => s.id === savedId)?.name}
             </p>
           </div>
@@ -494,19 +608,19 @@ export default function StaffPage() {
 
         {/* UNRECOGNISED ALERT */}
         {unrecognised.length > 0 && (
-          <div className="fade-up" style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 18px', background: 'transparent', border: `1.5px solid ${AMBER_BORDER}`, borderRadius: 14, marginBottom: 12 }}>
-              <AlertCircle size={16} color={AMBER} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div className="fade-up" style={{ marginBottom:20 }}>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 18px', background:'transparent', border:`1.5px solid ${AMBER_BORDER}`, borderRadius:14, marginBottom:12 }}>
+              <AlertCircle size={16} color={AMBER} style={{ flexShrink:0, marginTop:1 }} />
               <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 2 }}>
+                <p style={{ fontSize:13, fontWeight:700, color:INK, marginBottom:2 }}>
                   {unrecognised.length} unrecognised sender{unrecognised.length > 1 ? 's' : ''}
                 </p>
-                <p style={{ fontSize: 12, color: INK_60, lineHeight: 1.5 }}>
+                <p style={{ fontSize:12, color:INK_60, lineHeight:1.5 }}>
                   Haelo received emails from these addresses but doesn't recognise them. Add them to the directory so future emails are handled correctly.
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
               {unrecognised.map(u => (
                 <UnrecognisedRow key={u.email} u={u}
                   onAdd={() => promoteUnrecognised(u)}
@@ -517,7 +631,7 @@ export default function StaffPage() {
         )}
 
         {/* SEARCH */}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom:16 }}>
           <SearchInput value={search} onChange={setSearch} />
         </div>
 
@@ -527,29 +641,30 @@ export default function StaffPage() {
           onMouseLeave={() => setTableHov(false)}
           style={{
             background: tableHov ? WHITE : 'transparent',
-            border: `1.5px solid ${tableHov ? INK_20 : INK_10}`,
-            borderRadius: 16, overflow: 'hidden',
-            transition: 'all .22s cubic-bezier(.4,0,.2,1)',
+            border:`1.5px solid ${tableHov ? INK_20 : INK_10}`,
+            borderRadius:16, overflow:'hidden',
+            transition:'all .22s cubic-bezier(.4,0,.2,1)',
             boxShadow: tableHov ? '0 8px 32px rgba(17,39,11,0.09)' : 'none',
           }}
         >
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', minWidth:360 }}>
               <thead>
-                <tr style={{ background: CREAM, borderBottom: `1px solid ${INK_10}` }}>
-                  {['Name', 'Role', 'Department', 'Timer', 'Status', ''].map((h, i) => (
-                    <th key={h || i} style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: INK_40, padding: '11px 20px', whiteSpace: 'nowrap' }}>
-                      {h}
-                    </th>
-                  ))}
+                <tr style={{ background:CREAM, borderBottom:`1px solid ${INK_10}` }}>
+                  <th style={{ textAlign:'left', fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:INK_40, padding:'11px 16px', whiteSpace:'nowrap' }}>Name</th>
+                  <th style={{ textAlign:'left', fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:INK_40, padding:'11px 16px', whiteSpace:'nowrap' }}>Role</th>
+                  <th className="col-dept" style={{ textAlign:'left', fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:INK_40, padding:'11px 16px', whiteSpace:'nowrap' }}>Department</th>
+                  <th className="col-timer" style={{ textAlign:'left', fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:INK_40, padding:'11px 16px', whiteSpace:'nowrap' }}>Timer</th>
+                  <th className="col-status" style={{ textAlign:'left', fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:INK_40, padding:'11px 16px', whiteSpace:'nowrap' }}>Status</th>
+                  <th style={{ padding:'11px 16px' }} />
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '48px 20px', textAlign: 'center' }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: INK_40, marginBottom: 4 }}>No staff found</p>
-                      <p style={{ fontSize: 12, color: INK_20 }}>Try adjusting your search.</p>
+                    <td colSpan={6} style={{ padding:'48px 20px', textAlign:'center' }}>
+                      <p style={{ fontSize:13, fontWeight:600, color:INK_40, marginBottom:4 }}>No staff found</p>
+                      <p style={{ fontSize:12, color:INK_20 }}>Try adjusting your search.</p>
                     </td>
                   </tr>
                 ) : filtered.map(s => (
@@ -567,7 +682,6 @@ export default function StaffPage() {
                         staff={s}
                         onSave={saveStaff}
                         onCancel={() => setEditingId(null)}
-                        onToggleStatus={() => {}}
                       />
                     )}
                   </>
@@ -576,19 +690,19 @@ export default function StaffPage() {
             </table>
           </div>
 
-          {/* Footer */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 20px', background: CREAM, borderTop: `1px solid ${INK_10}` }}>
-            <p style={{ fontSize: 11, color: INK_40, fontWeight: 500 }}>
-              Showing <strong style={{ color: INK, fontWeight: 700 }}>{filtered.length}</strong> of{' '}
-              <strong style={{ color: INK, fontWeight: 700 }}>{staff.length}</strong> staff members
+          {/* Table footer */}
+          <div className="table-footer">
+            <p style={{ fontSize:11, color:INK_40, fontWeight:500 }}>
+              Showing <strong style={{ color:INK, fontWeight:700 }}>{filtered.length}</strong> of{' '}
+              <strong style={{ color:INK, fontWeight:700 }}>{staff.length}</strong> staff members
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span style={{ fontSize: 11, color: INK_40 }}>
-                <span style={{ fontWeight: 700, color: GREEN }}>{staff.filter(s => s.status === 'active').length}</span> active ·{' '}
-                <span style={{ fontWeight: 700, color: INK_40 }}>{staff.filter(s => s.status === 'inactive').length}</span> inactive
+            <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+              <span style={{ fontSize:11, color:INK_40 }}>
+                <span style={{ fontWeight:700, color:GREEN }}>{staff.filter(s => s.status === 'active').length}</span> active ·{' '}
+                <span style={{ fontWeight:700, color:INK_40 }}>{staff.filter(s => s.status === 'inactive').length}</span> inactive
               </span>
               <button onClick={downloadCSV}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: GREEN, background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:700, color:GREEN, background:'none', border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans', sans-serif", whiteSpace:'nowrap' as const }}>
                 <Download size={11} /> Download CSV
               </button>
             </div>

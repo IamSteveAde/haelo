@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { RefreshCw, Download, Clock, CheckCircle, Trash2, FileText, ArrowRight, Plus, Upload } from 'lucide-react'
+import { Download, CheckCircle, FileText } from 'lucide-react'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK    = '#11270B'
@@ -27,9 +27,144 @@ const GLOBAL_CSS = `
 body,html{font-family:'Plus Jakarta Sans',sans-serif;background:${CREAM};color:${INK};-webkit-font-smoothing:antialiased}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes prog{from{width:0%}to{width:92%}}
 .fade-up{animation:fadeUp .38s cubic-bezier(.4,0,.2,1) both}
 .stagger-1{animation-delay:.04s}.stagger-2{animation-delay:.08s}.stagger-3{animation-delay:.12s}
+
+/* ── LAYOUT ── */
+.page-main{
+  flex:1;
+  padding:40px 40px 60px;
+  overflow-y:auto;
+  max-width:1200px;
+  margin:0 auto;
+  width:100%;
+}
+
+/* Summary bar: 4-col → 2-col → 1-col */
+.summary-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+}
+.summary-cell{
+  padding:0 20px;
+}
+.summary-cell:not(:last-child){
+  border-right:1px solid ${INK_10};
+}
+
+/* Main 2-col layout */
+.main-grid{
+  display:grid;
+  grid-template-columns:1fr 320px;
+  gap:16px;
+  align-items:start;
+}
+
+/* Right column */
+.right-col{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+/* Staff template grid: 5 cols */
+.staff-template-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+}
+
+/* Category tabs: wrap on small screens */
+.tab-row{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+/* ── TABLET: ≤ 900px ── */
+@media(max-width:900px){
+  .main-grid{
+    grid-template-columns:1fr;
+  }
+  .right-col{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  .summary-grid{
+    grid-template-columns:repeat(2,1fr);
+    gap:14px 0;
+  }
+  .summary-cell:not(:last-child){
+    border-right:none;
+  }
+  .summary-cell:nth-child(odd){
+    border-right:1px solid ${INK_10};
+  }
+  .summary-cell{
+    padding:8px 16px;
+  }
+}
+
+/* ── MOBILE: ≤ 600px ── */
+@media(max-width:600px){
+  .page-main{
+    padding:24px 16px 48px !important;
+  }
+  .summary-grid{
+    grid-template-columns:1fr 1fr;
+    gap:14px 0;
+  }
+  .summary-cell{
+    padding:8px 14px;
+  }
+  .summary-cell:nth-child(odd){
+    border-right:1px solid ${INK_10};
+  }
+  .main-grid{
+    grid-template-columns:1fr;
+  }
+  .right-col{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .staff-template-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
+  .staff-template-grid .staff-col-4,
+  .staff-template-grid .staff-col-5{
+    display:none;
+  }
+  .doc-header{
+    flex-direction:column;
+    gap:10px;
+  }
+  .doc-icon-wrap{
+    width:36px !important;
+    height:36px !important;
+  }
+}
+
+/* ── SMALL MOBILE: ≤ 380px ── */
+@media(max-width:380px){
+  .summary-grid{
+    grid-template-columns:1fr;
+  }
+  .summary-cell:nth-child(odd){
+    border-right:none;
+  }
+  .summary-cell:not(:last-child){
+    border-bottom:1px solid ${INK_10};
+  }
+  .staff-template-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+  .staff-template-grid .staff-col-3,
+  .staff-template-grid .staff-col-4,
+  .staff-template-grid .staff-col-5{
+    display:none;
+  }
+}
 `
 
 // ── DATA ─────────────────────────────────────────────────────────────────────
@@ -118,7 +253,7 @@ const versionHistory = [
 ]
 
 const identifiedStaff = [
-  { name: 'Tosin Adeyemi', role: 'Operations Manager', dept: 'Operations', email: 'tosin@company.com' },
+  { name: 'Tosin Adeyemi', role: 'Operations Manager', dept: 'Operations',     email: 'tosin@company.com' },
   { name: 'Funke Balogun', role: 'HR Manager',         dept: 'Human Resources', email: 'funke@company.com' },
   { name: 'Emeka Obi',     role: 'Finance Analyst',    dept: 'Finance',         email: 'emeka@company.com' },
   { name: 'Aisha Mohammed',role: 'Sales Lead',          dept: 'Sales',           email: 'aisha@company.com' },
@@ -167,9 +302,11 @@ function FileRow({ file, onRemove }: { file: UploadedFile; onRemove: (id: string
   const [hov, setHov] = useState(false)
   const ext = file.name.split('.').pop()?.toLowerCase() || ''
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: hov ? WHITE : CREAM, border: `1.5px solid ${hov ? INK_20 : INK_10}`, borderRadius: 10, transition: 'all .18s' }}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <div style={{ width: 32, height: 32, borderRadius: 7, background: `${EXT_COLOR[ext]||'#7F8C8D'}15`, color: EXT_COLOR[ext]||'#7F8C8D', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
+    <div
+      style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background: hov ? WHITE : CREAM, border:`1.5px solid ${hov ? INK_20 : INK_10}`, borderRadius:10, transition:'all .18s' }}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    >
+      <div style={{ width:32, height:32, borderRadius:7, background:`${EXT_COLOR[ext]||'#7F8C8D'}15`, color:EXT_COLOR[ext]||'#7F8C8D', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
         {EXT_ICON[ext]||'📎'}
       </div>
       <div style={{ flex:1, minWidth:0 }}>
@@ -187,7 +324,7 @@ function FileRow({ file, onRemove }: { file: UploadedFile; onRemove: (id: string
   )
 }
 
-// ── BIBLE TAB BTN ─────────────────────────────────────────────────────────────
+// ── TAB BUTTON ────────────────────────────────────────────────────────────────
 function BibleTabBtn({ doc, active, hasFiles, onClick }: {
   doc: typeof BIBLE_DOCS[0]; active: boolean; hasFiles: boolean; onClick: () => void
 }) {
@@ -207,7 +344,7 @@ function BibleTabBtn({ doc, active, hasFiles, onClick }: {
       }}
     >
       {hasFiles && !active ? '✓ ' : ''}{doc.icon} {doc.name}
-      {doc.required && !active ? <span style={{ color: GOLD, marginLeft:2 }}>*</span> : null}
+      {doc.required && !active ? <span style={{ color:GOLD, marginLeft:2 }}>*</span> : null}
     </button>
   )
 }
@@ -216,16 +353,17 @@ function BibleTabBtn({ doc, active, hasFiles, onClick }: {
 function StaffRow({ s }: { s: typeof identifiedStaff[0] }) {
   const [hov, setHov] = useState(false)
   return (
-    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', borderRadius:12, background: hov ? CREAM : 'transparent', transition:'all .18s', cursor:'default' }}>
+    <div
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', borderRadius:12, background: hov ? CREAM : 'transparent', transition:'all .18s', cursor:'default' }}
+    >
       <div style={{ width:34, height:34, background: hov ? INK : INK_06, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color: hov ? '#fff' : INK_40, flexShrink:0, transition:'all .2s' }}>
         {s.name.split(' ').map((n:string)=>n[0]).join('').slice(0,2)}
       </div>
       <div style={{ flex:1, minWidth:0 }}>
         <p style={{ fontSize:13, fontWeight:700, color:INK, marginBottom:1 }}>{s.name}</p>
-        <p style={{ fontSize:11, color:INK_40 }}>{s.role} · {s.dept}</p>
+        <p style={{ fontSize:11, color:INK_40, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.role} · {s.dept}</p>
       </div>
-      <p style={{ fontSize:11, color:INK_40, flexShrink:0, display:'none' }}>{s.email}</p>
       <CheckCircle size={14} color={GREEN} style={{ flexShrink:0 }} />
     </div>
   )
@@ -235,14 +373,16 @@ function StaffRow({ s }: { s: typeof identifiedStaff[0] }) {
 function VersionRow({ v }: { v: typeof versionHistory[0] }) {
   const [hov, setHov] = useState(false)
   return (
-    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    <div
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         display:'flex', alignItems:'flex-start', gap:12, padding:'12px 14px', borderRadius:12,
         background: v.active ? (hov ? 'rgba(46,125,82,0.1)' : GREEN_BG) : (hov ? CREAM : 'transparent'),
         border: `1.5px solid ${v.active ? 'rgba(46,125,82,0.2)' : (hov ? INK_10 : 'transparent')}`,
         transition:'all .2s', cursor:'default',
-      }}>
-      <div style={{ width:32, height:32, borderRadius:8, background: v.active ? GREEN_BG : INK_06, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:13 }}>
+      }}
+    >
+      <div style={{ width:32, height:32, borderRadius:8, background: v.active ? GREEN_BG : INK_06, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
         <FileText size={14} color={v.active ? GREEN : INK_40} />
       </div>
       <div style={{ flex:1, minWidth:0 }}>
@@ -263,14 +403,11 @@ function VersionRow({ v }: { v: typeof versionHistory[0] }) {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function BusinessBiblePage() {
-  const [activeTab, setActiveTab]   = useState('overview')
-  const [uploads, setUploads]       = useState<Record<string, UploadedFile[]>>({})
-  const [dragOver, setDragOver]     = useState(false)
-  const [uploading, setUploading]   = useState(false)
-  const [progress, setProgress]     = useState(0)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [uploads, setUploads]     = useState<Record<string, UploadedFile[]>>({})
+  const [dragOver, setDragOver]   = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // card hover states
   const [summaryHov, setSummaryHov] = useState(false)
   const [staffHov,   setStaffHov]   = useState(false)
   const [historyHov, setHistoryHov] = useState(false)
@@ -293,7 +430,7 @@ export default function BusinessBiblePage() {
       setTimeout(() => {
         setUploads(prev => ({
           ...prev,
-          [activeTab]: (prev[activeTab]||[]).map(f => f.id === nf.id ? { ...f, processing: false } : f),
+          [activeTab]: (prev[activeTab]||[]).map(f => f.id === nf.id ? { ...f, processing:false } : f),
         }))
       }, 900 + Math.random() * 700)
     })
@@ -305,12 +442,12 @@ export default function BusinessBiblePage() {
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <main style={{ flex:1, padding:'40px 40px 60px', overflowY:'auto', maxWidth:1200, margin:'0 auto', width:'100%' }}>
+      <main className="page-main">
 
         {/* ── HEADER ── */}
-        <div className="fade-up" style={{ marginBottom:36 }}>
+        <div className="fade-up" style={{ marginBottom:32 }}>
           <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:GOLD, marginBottom:6 }}>Business Bible</p>
-          <h1 style={{ fontSize:28, fontWeight:800, color:INK, letterSpacing:'-0.03em', lineHeight:1.1, marginBottom:4 }}>
+          <h1 style={{ fontSize:26, fontWeight:800, color:INK, letterSpacing:'-0.03em', lineHeight:1.15, marginBottom:4 }}>
             Company knowledge base
           </h1>
           <p style={{ fontSize:13, color:INK_60, fontWeight:500 }}>
@@ -320,26 +457,26 @@ export default function BusinessBiblePage() {
 
         {/* ── SUMMARY BAR ── */}
         <Card hov={summaryHov} onEnter={() => setSummaryHov(true)} onLeave={() => setSummaryHov(false)}
-          style={{ marginBottom:20, padding:'18px 24px' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:0 }}>
+          style={{ marginBottom:20, padding:'18px 4px' }}>
+          <div className="summary-grid">
             {[
               { label:'Documents uploaded', value:`${doneCount} / ${BIBLE_DOCS.length}` },
               { label:'Staff identified',   value:'47' },
               { label:'Last updated',       value:'Jun 18, 2026' },
-              { label:'Status',             value: allRequired ? 'Complete' : 'Incomplete' },
-            ].map((m, i) => (
-              <div key={m.label} style={{ padding:'0 20px', borderRight: i < 3 ? `1px solid ${INK_10}` : 'none' }}>
+              { label:'Status',             value: allRequired ? 'Complete' : 'Incomplete', highlight: true },
+            ].map((m) => (
+              <div key={m.label} className="summary-cell">
                 <p style={{ fontSize:11, color:INK_40, fontWeight:600, textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>{m.label}</p>
-                <p style={{ fontSize:20, fontWeight:800, color: m.label === 'Status' ? (allRequired ? GREEN : GOLD) : INK, letterSpacing:'-0.02em' }}>{m.value}</p>
+                <p style={{ fontSize:20, fontWeight:800, color: m.highlight ? (allRequired ? GREEN : GOLD) : INK, letterSpacing:'-0.02em' }}>{m.value}</p>
               </div>
             ))}
           </div>
         </Card>
 
         {/* ── TWO COLUMN LAYOUT ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:16, alignItems:'start' }}>
+        <div className="main-grid">
 
-          {/* ── LEFT: Upload section ── */}
+          {/* ── LEFT ── */}
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
             {/* Progress bar */}
@@ -348,7 +485,7 @@ export default function BusinessBiblePage() {
             </div>
 
             {/* Category tabs */}
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' as const }}>
+            <div className="tab-row">
               {BIBLE_DOCS.map(d => (
                 <BibleTabBtn key={d.id} doc={d} active={d.id === activeTab}
                   hasFiles={(uploads[d.id]||[]).length > 0}
@@ -357,13 +494,11 @@ export default function BusinessBiblePage() {
             </div>
 
             {/* Active doc card */}
-            <div style={{
-              background: WHITE, border:`1.5px solid ${INK_10}`, borderRadius:16, padding:28,
-              boxShadow:'0 1px 12px rgba(17,39,11,0.05)',
-            }}>
+            <div style={{ background:WHITE, border:`1.5px solid ${INK_10}`, borderRadius:16, padding:24, boxShadow:'0 1px 12px rgba(17,39,11,0.05)' }}>
+
               {/* Section header */}
-              <div style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom:20 }}>
-                <div style={{ width:42, height:42, background:INK, borderRadius:11, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
+              <div className="doc-header" style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom:20 }}>
+                <div className="doc-icon-wrap" style={{ width:42, height:42, background:INK, borderRadius:11, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
                   {doc.icon}
                 </div>
                 <div style={{ flex:1 }}>
@@ -378,10 +513,10 @@ export default function BusinessBiblePage() {
                 </div>
               </div>
 
-              {/* Template block — navy */}
+              {/* Template block */}
               {doc.isStaff ? (
                 <div style={{ background:NAVY, borderRadius:12, padding:18, marginBottom:18 }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:14, flexWrap:'wrap' as const }}>
                     <span style={{ fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase' as const, color:GOLD_LIGHT }}>
                       📥 Staff Directory Template
                     </span>
@@ -390,18 +525,17 @@ export default function BusinessBiblePage() {
                       ↓ Download CSV
                     </button>
                   </div>
-                  {/* 5-column staff grid */}
                   <div style={{ border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, overflow:'hidden', marginBottom:12 }}>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', background:'rgba(255,255,255,0.1)' }}>
-                      {['First Name','Last Name','Role','Email','Description'].map(col => (
-                        <div key={col} style={{ padding:'7px 10px', fontSize:10, fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase' as const, color:'rgba(255,255,255,0.6)', borderRight:'1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="staff-template-grid" style={{ background:'rgba(255,255,255,0.1)' }}>
+                      {['First Name','Last Name','Role','Email','Description'].map((col, idx) => (
+                        <div key={col} className={`staff-col-${idx+1}`} style={{ padding:'7px 10px', fontSize:10, fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase' as const, color:'rgba(255,255,255,0.6)', borderRight:'1px solid rgba(255,255,255,0.07)' }}>
                           {col}<span style={{ color:GOLD_LIGHT, marginLeft:2 }}>*</span>
                         </div>
                       ))}
                     </div>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-                      {['Tosin','Adeyemi','Ops Manager','tosin@co.com','Manages daily operations…'].map((cell,i) => (
-                        <div key={i} style={{ padding:'7px 10px', fontSize:11, color:'rgba(255,255,255,0.38)', fontStyle:'italic', borderRight:'1px solid rgba(255,255,255,0.05)' }}>{cell}</div>
+                    <div className="staff-template-grid" style={{ borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                      {['Tosin','Adeyemi','Ops Manager','tosin@co.com','Manages daily operations…'].map((cell, idx) => (
+                        <div key={idx} className={`staff-col-${idx+1}`} style={{ padding:'7px 10px', fontSize:11, color:'rgba(255,255,255,0.38)', fontStyle:'italic', borderRight:'1px solid rgba(255,255,255,0.05)' }}>{cell}</div>
                       ))}
                     </div>
                   </div>
@@ -415,7 +549,7 @@ export default function BusinessBiblePage() {
                 </div>
               ) : doc.templateCols ? (
                 <div style={{ background:NAVY, borderRadius:12, padding:18, marginBottom:18 }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:14, flexWrap:'wrap' as const }}>
                     <span style={{ fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase' as const, color:GOLD_LIGHT }}>
                       📥 {doc.name} Template
                     </span>
@@ -424,14 +558,14 @@ export default function BusinessBiblePage() {
                       ↓ Download template
                     </button>
                   </div>
-                  <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:9, padding:'11px 14px', marginBottom:12 }}>
-                    <div style={{ display:'grid', gridTemplateColumns:doc.templateCols.map(()=>'1fr').join(' '), gap:12, paddingBottom:6, marginBottom:6, borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
+                  <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:9, padding:'11px 14px', marginBottom:12, overflowX:'auto' as const }}>
+                    <div style={{ display:'grid', gridTemplateColumns:doc.templateCols.map(()=>'1fr').join(' '), gap:12, paddingBottom:6, marginBottom:6, borderBottom:'1px solid rgba(255,255,255,0.07)', minWidth:260 }}>
                       {doc.templateCols.map(c => (
                         <span key={c} style={{ fontSize:10, fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase' as const, color:'rgba(255,255,255,0.3)' }}>{c}</span>
                       ))}
                     </div>
                     {doc.templateRows!.slice(0,3).map((row,ri) => (
-                      <div key={ri} style={{ display:'grid', gridTemplateColumns:doc.templateCols!.map(()=>'1fr').join(' '), gap:12, paddingBottom:4, marginBottom:4, borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+                      <div key={ri} style={{ display:'grid', gridTemplateColumns:doc.templateCols!.map(()=>'1fr').join(' '), gap:12, paddingBottom:4, marginBottom:4, borderBottom:'1px solid rgba(255,255,255,0.04)', minWidth:260 }}>
                         {row.map((cell,ci) => (
                           <span key={ci} style={{ fontSize:11, color:'rgba(255,255,255,0.4)', fontStyle:'italic' }}>{cell}</span>
                         ))}
@@ -455,7 +589,7 @@ export default function BusinessBiblePage() {
                 onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(Array.from(e.dataTransfer.files)) }}
                 onClick={() => fileRef.current?.click()}
                 style={{
-                  border: `2px dashed ${dragOver ? INK : INK_20}`,
+                  border:`2px dashed ${dragOver ? INK : INK_20}`,
                   borderRadius:12, padding:'28px 20px', textAlign:'center' as const,
                   cursor:'pointer', background: dragOver ? INK_03 : 'transparent',
                   transition:'all .2s', marginBottom:14,
@@ -468,7 +602,6 @@ export default function BusinessBiblePage() {
                 <div style={{ fontSize:11, color:INK_40 }}>PDF, Word, Excel, CSV, images accepted</div>
               </div>
 
-              {/* File list */}
               {currentFiles.length > 0 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:7, marginBottom:10 }}>
                   {currentFiles.map(f => <FileRow key={f.id} file={f} onRemove={removeFile} />)}
@@ -480,7 +613,7 @@ export default function BusinessBiblePage() {
               )}
             </div>
 
-            {/* Identified staff card */}
+            {/* Staff identified card */}
             <Card hov={staffHov} onEnter={() => setStaffHov(true)} onLeave={() => setStaffHov(false)}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
                 <h2 style={{ fontSize:14, fontWeight:700, color:INK, letterSpacing:'-.01em' }}>Staff identified</h2>
@@ -495,8 +628,8 @@ export default function BusinessBiblePage() {
             </Card>
           </div>
 
-          {/* ── RIGHT: Version history + guide ── */}
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          {/* ── RIGHT ── */}
+          <div className="right-col">
 
             {/* Version history */}
             <Card hov={historyHov} onEnter={() => setHistoryHov(true)} onLeave={() => setHistoryHov(false)}>
@@ -524,8 +657,6 @@ export default function BusinessBiblePage() {
                   </div>
                 ))}
               </div>
-
-              {/* Navy tip */}
               <div style={{ background:NAVY, borderRadius:12, padding:16, marginTop:18 }}>
                 <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase' as const, color:GOLD_LIGHT, marginBottom:8 }}>
                   ✨ Pro tip
@@ -535,7 +666,8 @@ export default function BusinessBiblePage() {
                 </p>
                 <button
                   onClick={() => downloadCSV('haelo_company_overview_template.csv', ['Section','Content'], [['Company name & industry',''],['What we do',''],['Who we serve',''],['Company values',''],['Key facts','']])}
-                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, width:'100%', background:'rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.7)', fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:12, fontWeight:600, padding:'10px', borderRadius:9, border:'1px solid rgba(255,255,255,0.1)', cursor:'pointer', transition:'all .18s' }}>
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, width:'100%', background:'rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.7)', fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:12, fontWeight:600, padding:'10px', borderRadius:9, border:'1px solid rgba(255,255,255,0.1)', cursor:'pointer', transition:'all .18s' }}
+                >
                   <Download size={13} /> Download all templates
                 </button>
               </div>
@@ -571,7 +703,6 @@ export default function BusinessBiblePage() {
                 </div>
               </div>
             </Card>
-
           </div>
         </div>
       </main>
