@@ -4,32 +4,91 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react'
 
-// ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK        = '#11270B'
 const NAVY       = '#0A1628'
 const CREAM      = '#F7F4EE'
 const WHITE      = '#FFFFFF'
 const GOLD       = '#B8962E'
-const GOLD_LIGHT = '#D4AE52'
 const GREEN      = '#2E7D52'
-const GREEN_BG   = 'rgba(46,125,82,0.08)'
 const INK_10     = 'rgba(17,39,11,0.1)'
 const INK_20     = 'rgba(17,39,11,0.2)'
 const INK_40     = 'rgba(17,39,11,0.4)'
 const INK_60     = 'rgba(17,39,11,0.6)'
-const INK_06     = 'rgba(17,39,11,0.06)'
+
+const TRUST_POINTS = [
+  'Emails monitored in real time',
+  'WhatsApp approvals in one tap',
+  'Your team never waits',
+]
 
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased;height:100%}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes breathe{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .fade-up{animation:fadeUp .32s cubic-bezier(.4,0,.2,1) both}
+
+.login-grid {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  background: ${CREAM};
+}
+.login-form-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 48px;
+  background: ${WHITE};
+  min-height: 100vh;
+  border-right: 1px solid ${INK_10};
+}
+.login-right-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 64px 56px;
+  background: ${NAVY};
+}
+.login-trust-mobile {
+  display: none;
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .login-grid {
+    grid-template-columns: 1fr;
+  }
+  .login-form-col {
+    padding: 48px 40px;
+    border-right: none;
+    min-height: auto;
+  }
+  .login-right-col {
+    display: none;
+  }
+  .login-trust-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px solid ${INK_10};
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .login-form-col {
+    padding: 40px 24px;
+    justify-content: flex-start;
+    padding-top: 48px;
+  }
+}
 `
 
-// ── LOGO ─────────────────────────────────────────────────────────────────────
 function HaeloLogo({ light = false }: { light?: boolean }) {
   const c = light ? '#fff' : INK
   return (
@@ -45,7 +104,6 @@ function HaeloLogo({ light = false }: { light?: boolean }) {
   )
 }
 
-// ── FIELD INPUT ───────────────────────────────────────────────────────────────
 function FieldInput({
   label, id, type = 'text', placeholder, value, onChange,
   required, autoFocus, suffix, rightLabel,
@@ -90,7 +148,6 @@ function FieldInput({
   )
 }
 
-// ── GOOGLE BUTTON ─────────────────────────────────────────────────────────────
 function GoogleBtn() {
   const [hov, setHov] = useState(false)
   return (
@@ -98,7 +155,6 @@ function GoogleBtn() {
       type="button"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      onClick={() => { /* TODO: window.location.href = '/api/auth/google' */ }}
       style={{
         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
         background: hov ? CREAM : 'transparent',
@@ -120,7 +176,6 @@ function GoogleBtn() {
   )
 }
 
-// ── SIGN IN BUTTON ────────────────────────────────────────────────────────────
 function SignInBtn({ loading, disabled }: { loading: boolean; disabled: boolean }) {
   const [hov, setHov] = useState(false)
   return (
@@ -156,7 +211,24 @@ function SignInBtn({ loading, disabled }: { loading: boolean; disabled: boolean 
   )
 }
 
-// ── PAGE ──────────────────────────────────────────────────────────────────────
+function TrustPoint({ text }: { text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <CheckCircle size={14} color={GREEN} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 13, color: 'rgba(247,244,238,0.7)', lineHeight: 1.4 }}>{text}</span>
+    </div>
+  )
+}
+
+function TrustPointMobile({ text }: { text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <CheckCircle size={13} color={GREEN} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 12, color: INK_40, lineHeight: 1.4 }}>{text}</span>
+    </div>
+  )
+}
+
 export default function LoginPage() {
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -171,53 +243,29 @@ export default function LoginPage() {
     if (!canSubmit) return
     setError('')
     setLoading(true)
-
-    // TODO: POST /api/auth/login
-    // const res = await fetch('/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password }),
-    // })
-    // const data = await res.json()
-    // if (res.ok) {
-    //   window.location.href = '/dashboard/overview'
-    // } else {
-    //   setError(data.message || 'Invalid email or password.')
-    //   setLoading(false)
-    // }
-
     setTimeout(() => { window.location.href = '/dashboard/overview' }, 1600)
   }
 
-  const TRUST_POINTS = [
-    'Emails monitored in real time',
-    'WhatsApp approvals in one tap',
-    'Your team never waits',
-  ]
-
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: '420px 1fr', background: CREAM }}>
+    <div className="login-grid">
       <style>{GLOBAL_CSS}</style>
 
-      {/* ── LEFT: FORM ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 48px', background: WHITE, minHeight: '100vh', borderRight: `1px solid ${INK_10}` }}>
+      {/* LEFT: FORM */}
+      <div className="login-form-col">
         <div style={{ maxWidth: 360, width: '100%', margin: '0 auto' }}>
 
-          {/* Logo */}
           <div style={{ marginBottom: 44 }}>
             <Link href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
               <HaeloLogo />
             </Link>
           </div>
 
-          {/* Header */}
           <div className="fade-up" style={{ marginBottom: 32 }}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>Welcome back</p>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: INK, letterSpacing: '-0.025em', lineHeight: 1.1, marginBottom: 6 }}>Sign in to Haelo</h1>
             <p style={{ fontSize: 13, color: INK_60 }}>Your AI Chief of Staff is ready.</p>
           </div>
 
-          {/* Error banner */}
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -225,19 +273,15 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <FieldInput
-              label="Email address"
-              id="email" type="email"
+              label="Email address" id="email" type="email"
               placeholder="adaeze@company.com"
               value={email} onChange={setEmail}
               required autoFocus
             />
-
             <FieldInput
-              label="Password"
-              id="password"
+              label="Password" id="password"
               type={showPw ? 'text' : 'password'}
               placeholder="Your password"
               value={password} onChange={setPassword}
@@ -259,20 +303,15 @@ export default function LoginPage() {
                 </button>
               }
             />
-
             <SignInBtn loading={loading} disabled={!canSubmit} />
-
-            {/* Divider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ flex: 1, height: 1, background: INK_10 }} />
               <span style={{ fontSize: 11, color: INK_40, fontWeight: 600 }}>or</span>
               <div style={{ flex: 1, height: 1, background: INK_10 }} />
             </div>
-
             <GoogleBtn />
           </form>
 
-          {/* Sign up link */}
           <p style={{ fontSize: 13, color: INK_60, textAlign: 'center', marginTop: 28 }}>
             No account yet?{' '}
             <Link href="/auth/signup"
@@ -282,16 +321,23 @@ export default function LoginPage() {
               Start free trial
             </Link>
           </p>
+
+          {/* Trust points — mobile only, below the form */}
+          <div className="login-trust-mobile">
+            {TRUST_POINTS.map(t => <TrustPointMobile key={t} text={t} />)}
+          </div>
         </div>
       </div>
 
-      
+      {/* RIGHT: NAVY PANEL — desktop only */}
+      <div className="login-right-col">
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(247,244,238,0.35)', marginBottom: 40 }}>
+          Why Haelo
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 320 }}>
+          {TRUST_POINTS.map(t => <TrustPoint key={t} text={t} />)}
+        </div>
+      </div>
     </div>
   )
 }
-
-const TRUST_POINTS = [
-  'Emails monitored in real time',
-  'WhatsApp approvals in one tap',
-  'Your team never waits',
-]
