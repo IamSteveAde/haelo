@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react'
+import { login as loginApi } from '@/lib/api/auth'
 
 const INK        = '#11270B'
 const NAVY       = '#0A1628'
@@ -236,6 +238,8 @@ export default function LoginPage() {
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
 
+  const router = useRouter()
+
   const canSubmit = email.includes('@') && password.length >= 1
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -243,7 +247,19 @@ export default function LoginPage() {
     if (!canSubmit) return
     setError('')
     setLoading(true)
-    setTimeout(() => { window.location.href = '/dashboard/overview' }, 1600)
+    
+    try {
+      const res = await loginApi(email, password)
+      
+      if (res.data?.token) {
+        localStorage.setItem('token', res.data.token)
+      }
+      
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
+      setLoading(false)
+    }
   }
 
   return (

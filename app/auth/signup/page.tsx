@@ -1,24 +1,108 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react'
+import { register, verifyOtp, checkEmail } from '@/lib/api/auth'
 
 export default function SignupPage() {
   const [show, setShow] = useState(false)
   const [step, setStep] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [checkingEmail, setCheckingEmail] = useState(false)
+  const [emailValid, setEmailValid] = useState(false)
   const [form, setForm] = useState({
-    name: '', email: '', company: '', password: '',
+    name: '', email: '', company: '', password: '', otp: ''
   })
+
+  const router = useRouter()
+
+  useEffect(() => {
+    const validateEmail = async () => {
+      if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        setEmailValid(false)
+        return
+      }
+      setCheckingEmail(true)
+      setError('')
+      try {
+        await checkEmail(form.email)
+        setEmailValid(true)
+      } catch (err: any) {
+        setEmailValid(false)
+        setError(err.message || 'Email is already in use or invalid')
+      } finally {
+        setCheckingEmail(false)
+      }
+    }
+
+    const timer = setTimeout(() => {
+      if (step === 1) validateEmail()
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [form.email, step])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+    if (e.target.name === 'email' && step === 1) {
+      setEmailValid(false)
+      setError('')
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In production: POST to /api/auth/signup
-    window.location.href = '/dashboard/overview'
+    
+    if (step === 3) {
+      setError('')
+      setLoading(true)
+      try {
+        const res = await register({
+          name: form.name,
+          email: form.email,
+          companyName: form.company,
+          password: form.password
+        })
+        
+        if (res.data?.token) {
+          localStorage.setItem('registrationToken', res.data.token)
+        }
+        
+        setStep(4) // Move to OTP step
+      } catch (err: any) {
+        setError(err.message || 'Registration failed')
+      } finally {
+        setLoading(false)
+      }
+    } else if (step === 4) {
+      setError('')
+      setLoading(true)
+      try {
+        const regToken = localStorage.getItem('registrationToken')
+        if (!regToken) throw new Error('Missing registration token. Please try signing up again.')
+        
+        const res = await verifyOtp(regToken, form.otp)
+        
+        if (res.data?.token) {
+          localStorage.setItem('token', res.data.token)
+          // Cleanup registration token
+          localStorage.removeItem('registrationToken')
+        }
+        
+        setSuccess(res.message || 'Account verified successfully!')
+        setTimeout(() => {
+          router.push('/onboarding')
+        }, 1500)
+      } catch (err: any) {
+        setError(err.message || 'OTP verification failed')
+      } finally {
+        setLoading(false)
+      }
+    }
   }
 
   return (
@@ -52,6 +136,17 @@ export default function SignupPage() {
         </p>
       </div>
 
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+        </div>
+      )}
+      {success && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(46,125,82,0.07)', border: '1.5px solid rgba(46,125,82,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#2E7D52' }}>{success}</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-5">
         {step === 1 && (
           <>
@@ -84,11 +179,21 @@ export default function SignupPage() {
             </div>
             <button
               type="button"
-              className="btn-primary w-full justify-center py-3.5"
-              onClick={() => form.name && form.email && setStep(2)}
+              className="btn-primary w-full justify-center py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => form.name && emailValid && setStep(2)}
+              disabled={!form.name || !emailValid || checkingEmail}
             >
-              Continue
-              <ArrowRight size={16} />
+              {checkingEmail ? (
+                <>
+                  <Loader2 size={16} className="animate-spin mr-2" />
+                  Checking email...
+                </>
+              ) : (
+                <>
+                  Continue
+                  <ArrowRight size={16} />
+                </>
+              )}
             </button>
           </>
         )}
@@ -166,9 +271,35 @@ export default function SignupPage() {
 
             <div className="flex gap-3">
               <button type="button" className="btn-ghost" onClick={() => setStep(2)}>Back</button>
-              <button type="submit" className="btn-primary flex-1 justify-center py-3.5">
-                Create account
-                <ArrowRight size={16} />
+              <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center py-3.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                {loading ? 'Creating...' : 'Create account'}
+                {!loading && <ArrowRight size={16} />}
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <div>
+              <label className="label" htmlFor="otp">Verification Code</label>
+              <input
+                id="otp"
+                name="otp"
+                type="text"
+                placeholder="Enter OTP sent to your email"
+                className="input"
+                value={form.otp}
+                onChange={handleChange}
+                required
+                autoFocus
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center py-3.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                {loading ? 'Verifying...' : 'Verify OTP'}
+                {!loading && <ArrowRight size={16} />}
               </button>
             </div>
           </>

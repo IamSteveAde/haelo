@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { connectEmail, saveDomain, addWhatsappNumber, verifyWhatsappNumber, uploadBibleFiles, saveHaeloTone, saveTimerConfig } from '@/lib/api/onboard'
 
 type TimerMode = 'auto-send' | 'remind' | 'hybrid'
 type ToneId = 'direct' | 'warm' | 'formal' | 'collaborative' | 'brief' | 'custom'
@@ -10,6 +11,7 @@ interface UploadedFile {
   name: string
   size: string
   processing: boolean
+  file?: File
 }
 
 const INK = '#11270B'
@@ -222,21 +224,23 @@ function BtnInk({ onClick, children, disabled=false }: { onClick:()=>void; child
   )
 }
 
-function BtnGreen({ onClick, children }: { onClick:()=>void; children:React.ReactNode }) {
+function BtnGreen({ onClick, children, disabled=false }: { onClick:()=>void; children:React.ReactNode; disabled?:boolean }) {
   const [hov, setHov] = useState(false)
   return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display:'inline-flex', alignItems:'center', gap:8, background:hov?'#236040':GREEN, color:'#fff', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:600, padding:'12px 20px', borderRadius:10, border:'none', cursor:'pointer', transform:hov?'translateY(-1px)':'none', boxShadow:hov?'0 6px 18px rgba(46,125,82,0.3)':'none', transition:'all .2s cubic-bezier(.4,0,.2,1)', whiteSpace:'nowrap' as const }}>
+    <button onClick={onClick} disabled={disabled}
+      onMouseEnter={() => !disabled && setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display:'inline-flex', alignItems:'center', gap:8, background:disabled?INK_20:hov?'#236040':GREEN, color:disabled?INK_40:'#fff', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:600, padding:'12px 20px', borderRadius:10, border:'none', cursor:disabled?'not-allowed':'pointer', transform:hov&&!disabled?'translateY(-1px)':'none', boxShadow:hov&&!disabled?'0 6px 18px rgba(46,125,82,0.3)':'none', transition:'all .2s cubic-bezier(.4,0,.2,1)', whiteSpace:'nowrap' as const }}>
       {children}
     </button>
   )
 }
 
-function BtnGhost({ onClick, children }: { onClick:()=>void; children:React.ReactNode }) {
+function BtnGhost({ onClick, children, disabled=false }: { onClick:()=>void; children:React.ReactNode; disabled?:boolean }) {
   const [hov, setHov] = useState(false)
   return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display:'inline-flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:600, color:hov?INK:INK_40, padding:0, transition:'color .15s', whiteSpace:'nowrap' as const }}>
+    <button onClick={onClick} disabled={disabled}
+      onMouseEnter={() => !disabled && setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display:'inline-flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:disabled?'not-allowed':'pointer', fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:12, fontWeight:600, color:disabled?INK_20:hov?INK:INK_40, padding:0, transition:'color .15s', whiteSpace:'nowrap' as const }}>
       {children}
     </button>
   )
@@ -419,15 +423,45 @@ function StepEmail({ onNext }: { onNext:()=>void }) {
   const [connecting, setConnecting] = useState<string|null>(null)
   const [connected, setConnected] = useState<string|null>(null)
 
+  const [error, setError] = useState('')
+
   const providers = [
     { id:'gmail',   name:'Gmail',                    sub:'Google OAuth 2.0 · Gmail API',         bg:'#EA4335', letter:'G' },
     { id:'outlook', name:'Outlook / Microsoft 365',  sub:'Microsoft Graph API · OAuth 2.0',       bg:'#0078D4', letter:'O' },
     { id:'zoho',    name:'Zoho Mail',                sub:'Zoho OAuth · Zoho Mail API',            bg:'#E4261C', letter:'Z' },
   ]
 
-  const connect = (id:string) => {
+  const connect = async (id:string) => {
+    setError('')
     setConnecting(id)
-    setTimeout(() => { setConnecting(null); setConnected(id) }, 1800)
+    try {
+      const providerStr = id === 'zoho' ? 'zoho.com' : id === 'gmail' ? 'gmail.com' : null
+      if (!providerStr) {
+        setError('Provider not supported yet')
+        setConnecting(null)
+        return
+      }
+      
+      const res = await connectEmail(providerStr as any)
+      
+      if (res.data?.authUrl) {
+        const width = 500;
+        const height = 650;
+        const left = window.innerWidth / 2 - width / 2;
+        const top = window.screen.availHeight / 2 - height / 2;
+        
+        window.open(
+          res.data.authUrl,
+          'OAuthPopup',
+          `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+        )
+        setConnected(id)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to connect email')
+    } finally {
+      setConnecting(null)
+    }
   }
 
   if (connected) {
@@ -440,6 +474,13 @@ function StepEmail({ onNext }: { onNext:()=>void }) {
       <Eyebrow n={1} />
       <StepTitle>Connect your inbox.</StepTitle>
       <StepSub>Haelo monitors your company email in real time. OAuth only — your password is never stored or seen.</StepSub>
+      
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+        </div>
+      )}
+
       {providers.map(p => <ProviderBtn key={p.id} {...p} connecting={connecting} onConnect={connect} />)}
       <InfoBar>🔒 Haelo only reads emails from your company domain. External emails are never touched. Access can be revoked instantly from Settings.</InfoBar>
     </div>
@@ -450,13 +491,35 @@ function StepEmail({ onNext }: { onNext:()=>void }) {
 
 function StepDomain({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
   const [domain, setDomain] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const valid = domain.trim().length > 3 && domain.includes('.')
+
+  const handleNext = async () => {
+    if (!valid) return
+    setSaving(true)
+    setError('')
+    try {
+      await saveDomain(domain.trim())
+      onNext()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save domain')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div>
       <Eyebrow n={2} />
       <StepTitle>Your company domain.</StepTitle>
       <StepSub>Haelo will only read and respond to emails from this domain. Everything else — clients, vendors, personal mail — is permanently ignored.</StepSub>
+
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+        </div>
+      )}
 
       <div style={{ marginBottom:20 }}>
         <FieldInput
@@ -498,9 +561,10 @@ function StepDomain({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
       <InfoBar>🔒 Your domain setting can be updated any time from Settings. You can also add secondary domains later.</InfoBar>
 
       <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:20, flexWrap:'wrap' as const }}>
-        <BtnGhost onClick={onBack}><ArrowLeft /> Back</BtnGhost>
-        <BtnInk onClick={onNext} disabled={!valid}>
-          {valid ? 'Continue to WhatsApp' : 'Enter your domain first'} <ArrowRight color={!valid?INK_40:'#fff'} />
+        <BtnGhost onClick={onBack} disabled={saving}><ArrowLeft /> Back</BtnGhost>
+        <BtnInk onClick={handleNext} disabled={!valid || saving}>
+          {saving ? 'Saving...' : valid ? 'Continue to WhatsApp' : 'Enter your domain first'} 
+          {!saving && <ArrowRight color={!valid?INK_40:'#fff'} />}
         </BtnInk>
       </div>
     </div>
@@ -516,15 +580,64 @@ function StepWhatsApp({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) 
   const [code, setCode] = useState(['','','','','',''])
   const [verifying, setVerifying] = useState(false)
   const [verified, setVerified] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const refs = useRef<(HTMLInputElement|null)[]>([])
 
+  const handleSend = async () => {
+    if (phone.length < 8) return
+    setLoading(true)
+    setError('')
+    try {
+      await addWhatsappNumber(`234${phone}`)
+      setSent(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to add WhatsApp number')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const triggerVerify = async (otpCode: string[]) => {
+    setVerifying(true)
+    setError('')
+    try {
+      await verifyWhatsappNumber(`234${phone}`, otpCode.join(''))
+      setVerified(true)
+    } catch (err: any) {
+      setError(err.message || 'OTP verification failed')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
   const handleCode = (i:number, val:string) => {
-    const v = val.replace(/\D/g,'').slice(-1)
-    const next = [...code]; next[i] = v; setCode(next)
+    const cleanVal = val.replace(/\D/g, '')
+    
+    if (cleanVal.length > 1) {
+      const next = [...code]
+      for (let j = 0; j < cleanVal.length && i + j < 6; j++) {
+        next[i + j] = cleanVal[j]
+      }
+      setCode(next)
+      if (i + cleanVal.length < 6) refs.current[i + cleanVal.length]?.focus()
+      else refs.current[5]?.focus()
+      
+      if (next.every(c => c !== '')) triggerVerify(next)
+      return
+    }
+
+    if (val !== '' && cleanVal === '') return
+
+    const v = cleanVal.slice(-1)
+    const next = [...code]
+    next[i] = v
+    setCode(next)
+    
     if (v && i < 5) refs.current[i+1]?.focus()
+    
     if (next.every(c => c !== '')) {
-      setVerifying(true)
-      setTimeout(() => { setVerifying(false); setVerified(true) }, 1600)
+      triggerVerify(next)
     }
   }
 
@@ -538,17 +651,24 @@ function StepWhatsApp({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) 
         <Eyebrow n={3} />
         <StepTitle>Enter your code.</StepTitle>
         <StepSub>Sent to +234 {phone} via WhatsApp.</StepSub>
+        
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+          </div>
+        )}
+
         {/* OTP GRID — uses CSS grid so boxes never overflow */}
         <div className="otp-grid">
           {code.map((digit, i) => (
             <input
               key={i}
               ref={el => { refs.current[i] = el }}
-              type="text" inputMode="numeric" maxLength={1} value={digit}
+              type="text" inputMode="numeric" value={digit}
               onChange={e => handleCode(i, e.target.value)}
-              onKeyDown={e => { if (e.key==='Backspace' && !code[i] && i>0) refs.current[i-1]?.focus() }}
+              onKeyDown={e => { if (e.key==='Backspace' && !code[i] && i>0) { refs.current[i-1]?.focus(); const next = [...code]; next[i-1] = ''; setCode(next); } }}
               className="otp-input"
-              style={{ background:digit?WHITE:CREAM, border:`1.5px solid ${digit?INK_40:INK_10}` }}
+              style={{ background:digit?WHITE:CREAM, border:`1.5px solid ${digit?INK_40:INK_10}`, color: INK, textAlign: 'center' }}
             />
           ))}
         </div>
@@ -569,6 +689,12 @@ function StepWhatsApp({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) 
       <Eyebrow n={3} />
       <StepTitle>Your WhatsApp number.</StepTitle>
       <StepSub>This is where every email notification lands — fast, familiar, and frictionless.</StepSub>
+
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+        </div>
+      )}
 
       <div style={{ marginBottom:20 }}>
         <label style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase' as const, color:INK_40, marginBottom:5 }}>WhatsApp number</label>
@@ -601,9 +727,9 @@ function StepWhatsApp({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) 
       </div>
 
       <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' as const }}>
-        <BtnGhost onClick={onBack}><ArrowLeft /> Back</BtnGhost>
-        <BtnInk onClick={() => phone.length >= 8 && setSent(true)} disabled={phone.length < 8}>
-          Send verification code <ArrowRight color={phone.length < 8?INK_40:'#fff'} />
+        <BtnGhost onClick={onBack} disabled={loading}><ArrowLeft /> Back</BtnGhost>
+        <BtnInk onClick={handleSend} disabled={phone.length < 8 || loading}>
+          {loading ? 'Sending...' : 'Send verification code'} {!loading && <ArrowRight color={phone.length < 8?INK_40:'#fff'} />}
         </BtnInk>
       </div>
     </div>
@@ -616,34 +742,34 @@ const BIBLE_DOCS = [
   {
     id:'overview', icon:'🏢', name:'Company Overview', required:true, isStaff:false,
     hint:'The foundation of every Haelo response. Describe your company — what it does, who it serves, core values, and how it operates.',
-    accept:'.pdf,.docx,.doc,.txt',
+    accept:'.csv',
     templateCols:['Section','Content'] as string[],
     templateRows:[['Company name & industry','e.g. Acme Corp — FMCG distribution'],['What we do','Products / services description'],['Who we serve','Target clients and markets'],['Company values','Core principles and culture'],['Key facts','Founded, headcount, revenue range']] as string[][],
     templateFile:'haelo_company_overview_template.csv',
     aiPrompt:'Fill this template for my company. We are called [name] and we do [description]. Format it as Section | Content.',
   },
   {
-    id:'staff', icon:'👥', name:'Staff Directory', required:true, isStaff:true,
+    id:'directory', icon:'👥', name:'Staff Directory', required:true, isStaff:true,
     hint:'Every person Haelo will recognise. Each row must include first name, last name, role, email, and a one-sentence description.',
-    accept:'.csv,.xlsx,.xls,.pdf,.docx,.doc',
+    accept:'.csv',
     templateFile:'haelo_staff_directory_template.csv',
     aiPrompt:'Fill this staff directory CSV for my team. My staff: [list names, roles]. Add a one-sentence description per person. Use columns: First Name, Last Name, Role, Email, Description.',
     templateCols:undefined as string[]|undefined,
     templateRows:undefined as string[][]|undefined,
   },
   {
-    id:'org', icon:'🏗️', name:'Org Chart', required:true, isStaff:false,
+    id:'chart', icon:'🏗️', name:'Org Chart', required:true, isStaff:false,
     hint:'Your hierarchy and reporting lines. Haelo uses this to understand seniority and route responses correctly.',
-    accept:'.pdf,.docx,.doc,.csv,.png,.jpg,.jpeg',
+    accept:'.csv',
     templateCols:['Name','Reports To','Department','Level'] as string[],
     templateRows:[['John Adeyemi','CEO','Executive','Director'],['Grace Obi','John Adeyemi','Operations','Manager'],['Finance Team','Grace Obi','Finance','Team Lead']] as string[][],
     templateFile:'haelo_org_structure_template.csv',
     aiPrompt:'Create an org chart CSV for my company. Hierarchy: [describe]. Columns: Name, Reports To, Department, Level.',
   },
   {
-    id:'sops', icon:'📋', name:'SOPs & Policies', required:false, isStaff:false,
+    id:'sop', icon:'📋', name:'SOPs & Policies', required:false, isStaff:false,
     hint:'Approval thresholds, leave policies, procurement rules, escalation paths.',
-    accept:'.pdf,.docx,.doc,.csv',
+    accept:'.csv',
     templateCols:['Situation','Standard Action','Who Approves'] as string[],
     templateRows:[['Leave request','Approve if 5 days notice and cover confirmed','CEO'],['Purchase above ₦500k','Requires Finance + CEO sign-off','CEO + Finance'],['Client complaint','Acknowledge 2hrs, resolve 24hrs','Operations Manager']] as string[][],
     templateFile:'haelo_sops_template.csv',
@@ -652,7 +778,7 @@ const BIBLE_DOCS = [
   {
     id:'comms', icon:'💬', name:'Comms Style', required:false, isStaff:false,
     hint:'How you communicate with your team. Formal or direct? Long or brief? Haelo mirrors this in every draft.',
-    accept:'.pdf,.docx,.doc,.txt',
+    accept:'.csv',
     templateCols:['Aspect','Your Preference'] as string[],
     templateRows:[['Tone','e.g. Direct and brief'],['With senior staff','e.g. Peer-to-peer, no formality'],['With junior staff','e.g. Warm but firm, action-oriented'],['Phrases to avoid','e.g. filler words, "I will try"'],['Format','e.g. One idea per message']] as string[][],
     templateFile:'haelo_comms_style_template.csv',
@@ -717,6 +843,8 @@ function StepBible({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
   const [activeTab, setActiveTab] = useState('overview')
   const [uploads, setUploads] = useState<Record<string,UploadedFile[]>>({})
   const [dragOver, setDragOver] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const doc = BIBLE_DOCS.find(d => d.id === activeTab)!
@@ -724,11 +852,46 @@ function StepBible({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
   const doneCount = BIBLE_DOCS.filter(d => (uploads[d.id]||[]).length>0).length
   const allRequired = BIBLE_DOCS.filter(d => d.required).every(d => (uploads[d.id]||[]).length>0)
 
+  const handleSubmit = async () => {
+    if (!allRequired) return
+    setLoading(true)
+    setError('')
+    
+    try {
+      const formData = new FormData()
+      
+      // Append files for each category
+      BIBLE_DOCS.forEach(docType => {
+        const categoryFiles = uploads[docType.id] || []
+        categoryFiles.forEach(fileObj => {
+          if (fileObj.file) {
+            formData.append(docType.id, fileObj.file)
+          }
+        })
+      })
+      
+      await uploadBibleFiles(formData)
+      onNext()
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload files')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleFiles = useCallback((files:File[]) => {
-    const newFiles:UploadedFile[] = Array.from(files).map(f => ({
+    const validFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'))
+    if (validFiles.length === 0 && files.length > 0) {
+      setError('Only CSV files are accepted.')
+      return
+    }
+    setError('')
+    
+    const newFiles:UploadedFile[] = validFiles.map(f => ({
       id:`${Date.now()}-${Math.random()}`, name:f.name,
       size:f.size>1048576?`${(f.size/1048576).toFixed(1)} MB`:`${Math.round(f.size/1024)} KB`,
       processing:true,
+      file: f,
     }))
     setUploads(prev => ({ ...prev, [activeTab]:[...(prev[activeTab]||[]),...newFiles] }))
     newFiles.forEach(nf => {
@@ -844,7 +1007,7 @@ function StepBible({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
           onChange={e => { if(e.target.files) handleFiles(Array.from(e.target.files)) }} />
         <div style={{ fontSize:22, marginBottom:8 }}>📎</div>
         <div style={{ fontSize:13, fontWeight:600, color:INK, marginBottom:3 }}>Drop files here or click to browse</div>
-        <div style={{ fontSize:11, color:INK_40 }}>PDF, Word, Excel, CSV, images accepted</div>
+        <div style={{ fontSize:11, color:INK_40 }}>Only CSV files accepted</div>
       </div>
 
       {currentFiles.length>0 && (
@@ -878,10 +1041,17 @@ function StepBible({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
         </div>
       </div>
 
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+        </div>
+      )}
+
       <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:4, flexWrap:'wrap' as const }}>
-        <BtnGhost onClick={onBack}><ArrowLeft /> Back</BtnGhost>
-        <BtnInk onClick={onNext} disabled={!allRequired}>
-          {allRequired?'Continue to Tone':'Upload required files first'} <ArrowRight color={!allRequired?INK_40:'#fff'} />
+        <BtnGhost onClick={onBack} disabled={loading}><ArrowLeft /> Back</BtnGhost>
+        <BtnInk onClick={handleSubmit} disabled={!allRequired || loading}>
+          {loading ? 'Uploading...' : allRequired ? 'Continue to Tone' : 'Upload required files first'} 
+          {!loading && <ArrowRight color={!allRequired?INK_40:'#fff'} />}
         </BtnInk>
       </div>
       {!allRequired && <p style={{ fontSize:10.5, color:INK_40, marginTop:8 }}>Required: Company Overview ✱ Staff Directory ✱ Org Chart ✱</p>}
@@ -917,6 +1087,25 @@ function StepTone({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
   const [selected, setSelected] = useState<ToneId>('direct')
   const [customText, setCustomText] = useState('')
   const [textFoc, setTextFoc] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleNext = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const toneValue = selected === 'custom' ? customText : selected
+      if (selected === 'custom' && !customText.trim()) {
+        throw new Error('Please describe your custom tone.')
+      }
+      await saveHaeloTone(toneValue)
+      onNext()
+    } catch(err: any) {
+      setError(err.message || 'Failed to save tone')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div>
@@ -943,9 +1132,17 @@ function StepTone({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
         <InfoBar>💡 Your tone setting shapes every AI-drafted response. You can still edit any response on WhatsApp before it sends.</InfoBar>
       </div>
 
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+        </div>
+      )}
+
       <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' as const }}>
-        <BtnGhost onClick={onBack}><ArrowLeft /> Back</BtnGhost>
-        <BtnInk onClick={onNext}>Continue to Timer <ArrowRight color="#fff" /></BtnInk>
+        <BtnGhost onClick={onBack} disabled={loading}><ArrowLeft /> Back</BtnGhost>
+        <BtnInk onClick={handleNext} disabled={loading}>
+          {loading ? 'Saving...' : 'Continue to Timer'} {!loading && <ArrowRight color="#fff" />}
+        </BtnInk>
       </div>
     </div>
   )
@@ -983,6 +1180,27 @@ function StepTimer({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
   const [mode, setMode] = useState<TimerMode>('hybrid')
   const [duration, setDuration] = useState('10')
   const [reminderFreq, setReminderFreq] = useState('5')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleNext = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      await saveTimerConfig({
+        timer: mode,
+        timerConfig: {
+          sendAfter: parseInt(duration) || 0,
+          remindAfter: mode !== 'auto-send' ? parseInt(reminderFreq) || 0 : 0
+        }
+      })
+      onNext()
+    } catch(err: any) {
+      setError(err.message || 'Failed to save timer config')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div>
@@ -1011,9 +1229,17 @@ function StepTimer({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) {
         )}
       </div>
 
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+        </div>
+      )}
+
       <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' as const }}>
-        <BtnGhost onClick={onBack}><ArrowLeft /> Back</BtnGhost>
-        <BtnGreen onClick={onNext}>Activate Haelo <ArrowRight color="#fff" /></BtnGreen>
+        <BtnGhost onClick={onBack} disabled={loading}><ArrowLeft /> Back</BtnGhost>
+        <BtnGreen onClick={handleNext} disabled={loading}>
+          {loading ? 'Activating...' : 'Activate Haelo'} {!loading && <ArrowRight color="#fff" />}
+        </BtnGreen>
       </div>
     </div>
   )
