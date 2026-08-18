@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Upload, Search, Edit2, Trash2, AlertCircle, CheckCircle, X, Download, Save } from 'lucide-react'
+import { getUnrecognizedSenders, addStaff as addStaffApi, getStaffDirectory } from '@/lib/api/staff'
 
 const INK    = '#11270B'
 const NAVY   = '#0A1628'
@@ -257,12 +258,12 @@ function SelectInput({ label, value, onChange, options }: {
 }
 
 // ── BUTTONS ───────────────────────────────────────────────────────────────────
-function BtnGhost({ onClick, children, className }: { onClick: () => void; children: React.ReactNode; className?: string }) {
+function BtnGhost({ onClick, children, className, disabled = false }: { onClick: () => void; children: React.ReactNode; className?: string; disabled?: boolean }) {
   const [hov, setHov] = useState(false)
   return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      className={className}
-      style={{ display:'inline-flex', alignItems:'center', gap:6, background: hov ? CREAM : 'transparent', border:`1.5px solid ${hov ? INK_20 : INK_10}`, borderRadius:10, padding:'9px 14px', fontSize:12, fontWeight:600, color: hov ? INK : INK_60, cursor:'pointer', fontFamily:"'Plus Jakarta Sans', sans-serif", transition:'all .18s', whiteSpace:'nowrap' as const }}>
+    <button onClick={onClick} onMouseEnter={() => !disabled && setHov(true)} onMouseLeave={() => setHov(false)}
+      className={className} disabled={disabled}
+      style={{ display:'inline-flex', alignItems:'center', gap:6, background: disabled ? 'transparent' : hov ? CREAM : 'transparent', border:`1.5px solid ${disabled ? INK_10 : hov ? INK_20 : INK_10}`, borderRadius:10, padding:'9px 14px', fontSize:12, fontWeight:600, color: disabled ? INK_20 : hov ? INK : INK_60, cursor:disabled?'not-allowed':'pointer', fontFamily:"'Plus Jakarta Sans', sans-serif", transition:'all .18s', whiteSpace:'nowrap' as const }}>
       {children}
     </button>
   )
@@ -481,10 +482,26 @@ function StaffCard({ s, isEditing, onEditToggle, onDelete }: {
 // ── ADD MODAL ─────────────────────────────────────────────────────────────────
 function AddModal({ onClose, onAdd }: {
   onClose: () => void
-  onAdd: (s: { name: string; role: string; email: string; dept: string }) => void
+  onAdd: (s: { name: string; role: string; email: string; dept: string }) => Promise<void>
 }) {
   const [form, setForm] = useState({ name:'', role:'', email:'', dept:'' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const valid = form.name.trim() && form.role.trim() && form.email.trim() && form.dept.trim()
+
+  const handleAdd = async () => {
+    if (!valid) return
+    setLoading(true)
+    setError('')
+    try {
+      await onAdd(form)
+      onClose()
+    } catch (err: any) {
+      setError(err.message || 'Failed to add staff')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div
@@ -510,11 +527,18 @@ function AddModal({ onClose, onAdd }: {
           <FieldInput label="Email address" placeholder="amara@company.com" value={form.email} onChange={v => setForm(f => ({ ...f, email:v }))} type="email" />
           <FieldInput label="Department"    placeholder="Marketing"          value={form.dept}  onChange={v => setForm(f => ({ ...f, dept:v }))} />
         </div>
+        
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', background: 'rgba(192,57,43,0.07)', border: '1.5px solid rgba(192,57,43,0.2)', borderRadius: 10, marginBottom: 18 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: '#C0392B' }}>{error}</p>
+          </div>
+        )}
+
         <div style={{ display:'flex', gap:10 }}>
-          <BtnGhost onClick={onClose}>Cancel</BtnGhost>
+          <BtnGhost onClick={onClose} disabled={loading}>Cancel</BtnGhost>
           <div style={{ flex:1 }}>
-            <BtnInk onClick={() => { if (valid) { onAdd(form); onClose() } }} disabled={!valid}>
-              <CheckCircle size={13} /> Add staff member
+            <BtnInk onClick={handleAdd} disabled={!valid || loading}>
+              {loading ? 'Adding...' : <><CheckCircle size={13} /> Add staff member</>}
             </BtnInk>
           </div>
         </div>
@@ -525,13 +549,61 @@ function AddModal({ onClose, onAdd }: {
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function StaffPage() {
-  const [staff, setStaff]               = useState<StaffMember[]>(INITIAL_STAFF)
-  const [unrecognised, setUnrecognised] = useState(UNRECOGNISED_INIT)
+  const [staff, setStaff]               = useState<StaffMember[]>([])
+  const [unrecognised, setUnrecognised] = useState<{ email: string; received: string }[]>([])
   const [search, setSearch]             = useState('')
   const [showAdd, setShowAdd]           = useState(false)
   const [editingId, setEditingId]       = useState<number | null>(null)
   const [tableHov, setTableHov]         = useState(false)
   const [savedId, setSavedId]           = useState<number | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const [page, setPage]                 = useState(1)
+  const [meta, setMeta]                 = useState<any>(null)
+
+  useEffect(() => {
+    const fetchUnrecognised = async () => {
+      try {
+        const unrecRes = await getUnrecognizedSenders(1, 7)
+        if (unrecRes?.data?.senders) {
+          setUnrecognised(unrecRes.data.senders.map((item: any) => ({
+            email: item.email || item,
+            received: item.received || 'Recently'
+          })))
+        }
+      } catch (err) {
+        console.error('Failed to fetch unrecognized:', err)
+      }
+    }
+    fetchUnrecognised()
+  }, [])
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      setLoading(true)
+      try {
+        const staffRes = await getStaffDirectory(page)
+
+// Deleted since unrecRes logic moved
+        if (staffRes?.data?.staff) {
+          setStaff(staffRes.data.staff.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            role: s.role,
+            dept: s.department || '',
+            email: s.email,
+            status: s.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
+            timer: typeof s.timer === 'number' ? `${s.timer} min` : s.timer
+          })))
+          setMeta(staffRes.data.meta)
+        }
+      } catch (err) {
+        console.error('Failed to fetch staff data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStaff()
+  }, [page])
 
   const filtered = staff.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -539,7 +611,13 @@ export default function StaffPage() {
     s.dept.toLowerCase().includes(search.toLowerCase())
   )
 
-  const addStaff = (form: { name: string; role: string; email: string; dept: string }) => {
+  const addStaff = async (form: { name: string; role: string; email: string; dept: string }) => {
+    await addStaffApi({
+      fullName: form.name,
+      role: form.role,
+      email: form.email,
+      department: form.dept
+    })
     setStaff(prev => [...prev, { id: Date.now(), ...form, status:'active', timer:'10 min' }])
   }
 
@@ -707,6 +785,28 @@ export default function StaffPage() {
               </button>
             </div>
           </div>
+
+          {/* Pagination Controls */}
+          {meta && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24, paddingBottom: 24 }}>
+              {meta.previousPage && (
+                <button 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  style={{ padding: '8px 16px', background: 'transparent', border: `1.5px solid ${INK_20}`, color: INK, fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  Previous Page
+                </button>
+              )}
+              {meta.nextPage && (
+                <button 
+                  onClick={() => setPage(p => p + 1)}
+                  style={{ padding: '8px 16px', background: INK, border: `1.5px solid ${INK}`, color: WHITE, fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  Next Page
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </>

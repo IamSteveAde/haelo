@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CheckCircle, Clock, Mail, Users, TrendingUp, ArrowRight, Zap } from 'lucide-react'
+import { getActivityLogs } from '@/lib/api/activity'
 
 const INK = '#11270B'
 const NAVY = '#0A1628'
@@ -165,13 +166,7 @@ body,html{font-family:'Plus Jakarta Sans',sans-serif;background:${CREAM};color:$
 }
 `
 
-const recentActivity = [
-  { id: 1, from: 'Tosin Adeyemi', role: 'Operations Manager', summary: "Requesting approval to reorder 50kg of rice before Friday's service.", status: 'sent', time: '2m ago' },
-  { id: 2, from: 'Funke Balogun', role: 'HR Manager', summary: 'Asking about the new remote work policy effective next month.', status: 'pending', time: '8m ago' },
-  { id: 3, from: 'Emeka Obi', role: 'Finance Analyst', summary: 'Submitted Q3 variance report for review and sign-off.', status: 'sent', time: '22m ago' },
-  { id: 4, from: 'Aisha Mohammed', role: 'Sales Lead', summary: 'Client follow-up on the Kano proposal — needs direction on pricing.', status: 'edited', time: '1h ago' },
-  { id: 5, from: 'Chidi Nwosu', role: 'Product Manager', summary: 'Requesting two days off next week for a family event.', status: 'auto-sent', time: '3h ago' },
-]
+// recentActivity array is now handled in the component state
 
 const stats = [
   { label: 'Emails handled today', value: '23', sub: '+4 from yesterday', icon: Mail, up: true },
@@ -229,10 +224,19 @@ function StatCard({ s, delay }: { s: typeof stats[0]; delay: number }) {
 }
 
 // ── ACTIVITY ROW ─────────────────────────────────────────────────────────────
-function ActivityRow({ item }: { item: typeof recentActivity[0] }) {
+interface ActivityItem {
+  id: number | string
+  from: string
+  role: string
+  summary: string
+  status: string
+  time: string
+}
+
+function ActivityRow({ item }: { item: ActivityItem }) {
   const [hov, setHov] = useState(false)
   const meta = STATUS_META[item.status]
-  const initials = item.from.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+  const initials = (item.from || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)
   return (
     <div
       onMouseEnter={() => setHov(true)}
@@ -383,6 +387,43 @@ function HaeloStatusCard() {
 export default function OverviewPage() {
   const [activityHov, setActivityHov] = useState(false)
   const [actionsHov, setActionsHov]   = useState(false)
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const res = await getActivityLogs(1, 5)
+        if (res?.data?.logs) {
+          setRecentActivity(res.data.logs.map((item: any) => {
+            const dateObj = new Date(item.sentAt || item.createdAt)
+            
+            // Format time string
+            const now = new Date()
+            const diffMs = now.getTime() - dateObj.getTime()
+            const diffMins = Math.round(diffMs / 60000)
+            const diffHours = Math.round(diffMins / 60)
+            
+            let timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            if (diffMins < 60 && diffMins > 0) timeStr = `${diffMins}m ago`
+            else if (diffHours < 24 && diffHours > 0) timeStr = `${diffHours}h ago`
+            else if (diffMins === 0) timeStr = 'Just now'
+            
+            return {
+              id: item.id || item.uid,
+              from: item.staff?.name || item.senderEmail || 'Unknown',
+              role: item.staff?.role || 'Unknown',
+              summary: (item.originalMessage || '').substring(0, 100) + '...',
+              status: (item.sentType || 'pending').toLowerCase(),
+              time: timeStr
+            }
+          }))
+        }
+      } catch (err) {
+        console.error('Failed to fetch recent activity:', err)
+      }
+    }
+    fetchActivity()
+  }, [])
 
   return (
     <>
