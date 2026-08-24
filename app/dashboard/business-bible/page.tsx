@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
-import { Download, CheckCircle, FileText } from 'lucide-react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { Download, CheckCircle, FileText, UploadCloud, Info, AlertTriangle, ArrowRight } from 'lucide-react'
+import { getStaffDirectory } from '@/lib/api/staff'
+import { uploadBibleFiles } from '@/lib/api/onboard'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK    = '#11270B'
@@ -252,14 +254,7 @@ const versionHistory = [
   { version: 'v1', date: 'Apr 10, 2026', docs: 2, staff: 35, active: false },
 ]
 
-const identifiedStaff = [
-  { name: 'Tosin Adeyemi', role: 'Operations Manager', dept: 'Operations',     email: 'tosin@company.com' },
-  { name: 'Funke Balogun', role: 'HR Manager',         dept: 'Human Resources', email: 'funke@company.com' },
-  { name: 'Emeka Obi',     role: 'Finance Analyst',    dept: 'Finance',         email: 'emeka@company.com' },
-  { name: 'Aisha Mohammed',role: 'Sales Lead',          dept: 'Sales',           email: 'aisha@company.com' },
-  { name: 'Chidi Nwosu',   role: 'Product Manager',    dept: 'Product',         email: 'chidi@company.com' },
-]
-
+// identifiedStaff array is now handled in the component state
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function downloadCSV(filename: string, cols: string[], rows: string[][]) {
   const csv = [cols.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n')
@@ -349,8 +344,14 @@ function BibleTabBtn({ doc, active, hasFiles, onClick }: {
   )
 }
 
-// ── STAFF ROW ─────────────────────────────────────────────────────────────────
-function StaffRow({ s }: { s: typeof identifiedStaff[0] }) {
+interface StaffItem {
+  name: string
+  role: string
+  dept: string
+  email: string
+}
+
+function StaffRow({ s }: { s: StaffItem }) {
   const [hov, setHov] = useState(false)
   return (
     <div
@@ -406,6 +407,7 @@ export default function BusinessBiblePage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [uploads, setUploads]     = useState<Record<string, UploadedFile[]>>({})
   const [dragOver, setDragOver]   = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [summaryHov, setSummaryHov] = useState(false)
@@ -413,27 +415,67 @@ export default function BusinessBiblePage() {
   const [historyHov, setHistoryHov] = useState(false)
   const [guideHov,   setGuideHov]   = useState(false)
 
+  const [identifiedStaff, setIdentifiedStaff] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const staffRes = await getStaffDirectory(1)
+        if (staffRes?.data?.staff) {
+          setIdentifiedStaff(staffRes.data.staff.map((s: any) => ({
+            name: s.name,
+            role: s.role,
+            dept: s.department || '',
+            email: s.email
+          })))
+        }
+      } catch (err) {
+        console.error('Failed to fetch staff data:', err)
+      }
+    }
+    fetchStaff()
+  }, [])
+
   const doc = BIBLE_DOCS.find(d => d.id === activeTab)!
   const currentFiles = uploads[activeTab] || []
   const doneCount = BIBLE_DOCS.filter(d => (uploads[d.id]||[]).length > 0).length
   const allRequired = BIBLE_DOCS.filter(d => d.required).every(d => (uploads[d.id]||[]).length > 0)
 
-  const handleFiles = useCallback((files: File[]) => {
-    const newFiles: UploadedFile[] = Array.from(files).map(f => ({
+  const handleFiles = useCallback(async (files: File[]) => {
+    setUploadError('')
+    const validFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'))
+    
+    if (validFiles.length === 0 && files.length > 0) {
+      setUploadError('Only CSV files are accepted.')
+      return
+    }
+
+    const newFiles: UploadedFile[] = Array.from(validFiles).map(f => ({
       id: `${Date.now()}-${Math.random()}`,
       name: f.name,
       size: f.size > 1048576 ? `${(f.size/1048576).toFixed(1)} MB` : `${Math.round(f.size/1024)} KB`,
       processing: true,
     }))
+    
     setUploads(prev => ({ ...prev, [activeTab]: [...(prev[activeTab]||[]), ...newFiles] }))
-    newFiles.forEach(nf => {
-      setTimeout(() => {
+    
+    try {
+      const formData = new FormData()
+      validFiles.forEach(f => {
+        formData.append(activeTab, f)
+      })
+      await uploadBibleFiles(formData)
+    } catch (err) {
+      console.error('Failed to upload files:', err)
+      // If error occurs, we could potentially remove them from the list or show an error
+    } finally {
+      newFiles.forEach(nf => {
         setUploads(prev => ({
           ...prev,
           [activeTab]: (prev[activeTab]||[]).map(f => f.id === nf.id ? { ...f, processing:false } : f),
         }))
-      }, 900 + Math.random() * 700)
-    })
+      })
+    }
   }, [activeTab])
 
   const removeFile = (id: string) =>
@@ -599,8 +641,14 @@ export default function BusinessBiblePage() {
                   onChange={e => { if(e.target.files) handleFiles(Array.from(e.target.files)) }} />
                 <div style={{ fontSize:22, marginBottom:8 }}>📎</div>
                 <div style={{ fontSize:13, fontWeight:600, color:INK, marginBottom:3 }}>Drop files here or click to browse</div>
-                <div style={{ fontSize:11, color:INK_40 }}>PDF, Word, Excel, CSV, images accepted</div>
+                <div style={{ fontSize:11, color:INK_40 }}>Only CSV files are accepted</div>
               </div>
+
+              {uploadError && (
+                <div style={{ marginBottom: 16, padding: '10px 12px', background: 'rgba(180,83,9,0.1)', color: '#B45309', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
+                  {uploadError}
+                </div>
+              )}
 
               {currentFiles.length > 0 && (
                 <div style={{ display:'flex', flexDirection:'column', gap:7, marginBottom:10 }}>

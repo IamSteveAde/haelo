@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, Clock, Mail, Users, TrendingUp, ArrowRight, Zap } from 'lucide-react'
+import { CheckCircle, Clock, Mail, Users, TrendingUp, ArrowRight, Zap, Loader2 } from 'lucide-react'
 import { getActivityLogs } from '@/lib/api/activity'
+import { getOverviewMetric, OverviewMetricType } from '@/lib/api/overview'
+import { getUnrecognizedSendersCount } from '@/lib/api/staff'
 
 const INK = '#11270B'
 const NAVY = '#0A1628'
@@ -168,11 +170,17 @@ body,html{font-family:'Plus Jakarta Sans',sans-serif;background:${CREAM};color:$
 
 // recentActivity array is now handled in the component state
 
-const stats = [
-  { label: 'Emails handled today', value: '23', sub: '+4 from yesterday', icon: Mail, up: true },
-  { label: 'Avg response time', value: '4.2m', sub: 'Target: under 10 min', icon: Clock, up: true },
-  { label: 'Approval rate', value: '91%', sub: 'Without editing', icon: CheckCircle, up: true },
-  { label: 'Staff recognised', value: '47', sub: '2 unrecognised pending', icon: Users, up: false },
+interface StatData {
+  label: string
+  metricKey: OverviewMetricType
+  icon: any
+}
+
+const stats: StatData[] = [
+  { label: 'Emails handled today', metricKey: 'emails-handled', icon: Mail },
+  { label: 'Avg response time', metricKey: 'avg-response-time', icon: Clock },
+  { label: 'Approval rate', metricKey: 'approval-rate', icon: CheckCircle },
+  { label: 'Staff recognised', metricKey: 'staff-recognised', icon: Users },
 ]
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -190,8 +198,31 @@ const quickActions = [
 ]
 
 // ── STAT CARD ────────────────────────────────────────────────────────────────
-function StatCard({ s, delay }: { s: typeof stats[0]; delay: number }) {
+function StatCard({ s, delay }: { s: StatData; delay: number }) {
   const [hov, setHov] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [value, setValue] = useState('-')
+  const [sub, setSub] = useState('')
+  const [up, setUp] = useState(false)
+
+  useEffect(() => {
+    const fetchMetric = async () => {
+      try {
+        const res = await getOverviewMetric(s.metricKey)
+        if (res?.data) {
+          setValue(res.data.value)
+          setSub(res.data.subtitle)
+          setUp(res.data.trend === 'up')
+        }
+      } catch (err) {
+        console.error('Failed to fetch metric', s.metricKey, err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchMetric()
+  }, [s.metricKey])
+
   return (
     <div
       className={`fade-up stagger-${delay}`}
@@ -204,21 +235,31 @@ function StatCard({ s, delay }: { s: typeof stats[0]; delay: number }) {
         transition: 'all .22s cubic-bezier(.4,0,.2,1)',
         boxShadow: hov ? '0 8px 28px rgba(17,39,11,0.09)' : 'none',
         cursor: 'default',
+        position: 'relative'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ width: 34, height: 34, borderRadius: 9, background: hov ? INK : INK_06, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .22s', flexShrink: 0 }}>
           <s.icon size={15} color={hov ? '#fff' : INK_40} />
         </div>
-        {s.up && (
+        {!loading && up && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: GREEN, background: GREEN_BG, padding: '3px 7px', borderRadius: 20, flexShrink: 0 }}>
             <TrendingUp size={10} /> Up
           </div>
         )}
       </div>
-      <p style={{ fontSize: 26, fontWeight: 800, color: INK, letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 4 }}>{s.value}</p>
-      <p style={{ fontSize: 10, fontWeight: 600, color: INK_60, marginBottom: 2, textTransform: 'uppercase' as const, letterSpacing: '.05em', lineHeight: 1.3 }}>{s.label}</p>
-      <p style={{ fontSize: 11, color: INK_40, lineHeight: 1.4 }}>{s.sub}</p>
+      {loading ? (
+        <div style={{ height: 42, display: 'flex', alignItems: 'center' }}>
+          <Loader2 size={20} color={INK_20} className="spinner" />
+          <style>{`@keyframes spin { 100% { transform: rotate(360deg); } } .spinner { animation: spin 1s linear infinite; }`}</style>
+        </div>
+      ) : (
+        <>
+          <p style={{ fontSize: 26, fontWeight: 800, color: INK, letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 4 }}>{value}</p>
+          <p style={{ fontSize: 10, fontWeight: 600, color: INK_60, marginBottom: 2, textTransform: 'uppercase' as const, letterSpacing: '.05em', lineHeight: 1.3 }}>{s.label}</p>
+          <p style={{ fontSize: 11, color: INK_40, lineHeight: 1.4 }}>{sub}</p>
+        </>
+      )}
     </div>
   )
 }
@@ -302,6 +343,24 @@ function Card({ children, hov, onEnter, onLeave, style: extra }: {
 // ── ALERT BADGE ───────────────────────────────────────────────────────────────
 function AlertBadge() {
   const [hov, setHov] = useState(false)
+  const [count, setCount] = useState<number | null>(null)
+  
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await getUnrecognizedSendersCount()
+        if (res?.data?.count !== undefined) {
+          setCount(res.data.count)
+        }
+      } catch (err) {
+        console.error('Failed to fetch unrecognized senders count', err)
+      }
+    }
+    fetchCount()
+  }, [])
+
+  if (count === 0) return null
+
   return (
     <div
       className="alert-badge"
@@ -321,7 +380,9 @@ function AlertBadge() {
         <Zap size={14} color={AMBER} />
       </div>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: 2 }}>2 unrecognised senders</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: 2 }}>
+          {count === null ? '...' : count} unrecognised sender{count === 1 ? '' : 's'}
+        </p>
         <p style={{ fontSize: 11, color: INK_60, lineHeight: 1.5, marginBottom: 9 }}>
           Emails from addresses not in your Staff Directory.
         </p>
@@ -332,6 +393,40 @@ function AlertBadge() {
           Review now <ArrowRight size={11} />
         </a>
       </div>
+    </div>
+  )
+}
+
+function HaeloStatusMetric({ label, metricKey }: { label: string, metricKey: OverviewMetricType }) {
+  const [loading, setLoading] = useState(true)
+  const [val, setVal] = useState('-')
+
+  useEffect(() => {
+    const fetchMetric = async () => {
+      try {
+        const res = await getOverviewMetric(metricKey)
+        if (res?.data) {
+          setVal(res.data.value)
+        }
+      } catch (err) {
+        console.error('Failed to fetch metric', metricKey, err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchMetric()
+  }, [metricKey])
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '10px 12px', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {loading ? (
+        <div style={{ height: 18, display: 'flex', alignItems: 'center', marginBottom: 2 }}>
+          <Loader2 size={14} color="rgba(255,255,255,0.4)" className="spinner" />
+        </div>
+      ) : (
+        <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', lineHeight: 1 }}>{val}</p>
+      )}
+      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 3, fontWeight: 500 }}>{label}</p>
     </div>
   )
 }
@@ -361,12 +456,8 @@ function HaeloStatusCard() {
       </p>
       <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginBottom: 14 }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 18 }}>
-        {[{ label: 'Emails today', val: '23' }, { label: 'Avg response', val: '4.2m' }].map(m => (
-          <div key={m.label} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '10px 12px', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', lineHeight: 1 }}>{m.val}</p>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 3, fontWeight: 500 }}>{m.label}</p>
-          </div>
-        ))}
+        <HaeloStatusMetric label="Emails today" metricKey="emails-handled" />
+        <HaeloStatusMetric label="Avg response" metricKey="avg-response-time" />
       </div>
       <a
         href="https://wa.me/2349000000000"
@@ -388,6 +479,7 @@ export default function OverviewPage() {
   const [activityHov, setActivityHov] = useState(false)
   const [actionsHov, setActionsHov]   = useState(false)
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [emailsHandled, setEmailsHandled] = useState<string>('...')
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -422,7 +514,17 @@ export default function OverviewPage() {
         console.error('Failed to fetch recent activity:', err)
       }
     }
+    const fetchEmailsHandled = async () => {
+      try {
+        const res = await getOverviewMetric('emails-handled')
+        if (res?.data) setEmailsHandled(res.data.value)
+      } catch (err) {
+        console.error('Failed to fetch emails handled:', err)
+        setEmailsHandled('-')
+      }
+    }
     fetchActivity()
+    fetchEmailsHandled()
   }, [])
 
   return (
@@ -440,7 +542,7 @@ export default function OverviewPage() {
               Good morning, Adaeze.
             </h1>
             <p style={{ fontSize: 13, color: INK_60, fontWeight: 500 }}>
-              Haelo has handled <strong style={{ color: INK, fontWeight: 700 }}>23 emails</strong> today. Your team is covered.
+              Haelo has handled <strong style={{ color: INK, fontWeight: 700 }}>{emailsHandled} emails</strong> today. Your team is covered.
             </p>
           </div>
           <AlertBadge />

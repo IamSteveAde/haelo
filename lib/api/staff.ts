@@ -6,6 +6,12 @@ export const getUnrecognizedSenders = async (page: number = 1, limit: number = 7
   })
 }
 
+export const getUnrecognizedSendersCount = async () => {
+  return await apiFetch(`/api/staff/unrecognized-senders/count`, {
+    method: 'GET'
+  })
+}
+
 export const addStaff = async (payload: { fullName: string, role: string, email: string, department: string }) => {
   return await apiFetch('/api/staff/add', {
     method: 'POST',
