@@ -3,872 +3,414 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
-/* ─────────────────────────────────────────────
-   TOKENS
-───────────────────────────────────────────── */
 const T = {
-  navy:      '#0B1724',
-  navy2:     '#111f30',
-  lime:      '#25D366',
-  lime2:     '#1dba57',
-  offwhite:  '#F5F5F2',
-  white:     '#ffffff',
-  gray:      '#8A919E',
-  border:    'rgba(255,255,255,0.07)',
-  borderL:   '#E8E8E4',
+  ink: '#10220D',
+  cream: '#F6F3EC',
+  gold: '#B99535',
+  green: '#2E7D52',
+  white: '#FFFFFF',
+  muted: '#687064',
+  line: 'rgba(16,34,13,.10)',
 }
 
-/* ─────────────────────────────────────────────
-   RESPONSIVE HOOK
-───────────────────────────────────────────── */
-function useBreakpoint() {
-  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
-  useEffect(() => {
-    const fn = () => setWidth(window.innerWidth)
-    window.addEventListener('resize', fn)
-    return () => window.removeEventListener('resize', fn)
-  }, [])
-  return {
-    isMobile: width < 600,
-    isTablet: width >= 600 && width < 900,
-    isDesktop: width >= 900,
-    width,
+const inkA = (a: number) => `rgba(16,34,13,${a})`
+const creamA = (a: number) => `rgba(246,243,236,${a})`
+
+const SELF_SERVE_MAX = 15
+type Tier = { from: number; to: number; rate: number; label: string }
+const TIERS: Tier[] = [
+  { from: 1, to: 1, rate: 55000, label: 'Seat 1' },
+  { from: 2, to: 5, rate: 45000, label: 'Seats 2–5' },
+  { from: 6, to: 15, rate: 35000, label: 'Seats 6–15' },
+]
+
+type Breakdown = { label: string; qty: number; rate: number; subtotal: number }
+
+function computeBilling(seats: number) {
+  if (seats > SELF_SERVE_MAX) return { total: 0, breakdown: [] as Breakdown[], isCustom: true }
+  let remaining = seats
+  let total = 0
+  const breakdown: Breakdown[] = []
+
+  for (const tier of TIERS) {
+    if (remaining <= 0) break
+    const capacity = tier.to - tier.from + 1
+    const qty = Math.min(remaining, capacity)
+    if (qty > 0) {
+      const subtotal = qty * tier.rate
+      breakdown.push({ label: tier.label, qty, rate: tier.rate, subtotal })
+      total += subtotal
+      remaining -= qty
+    }
   }
+  return { total, breakdown, isCustom: false }
 }
 
-/* ─────────────────────────────────────────────
-   WHATSAPP ICON
-───────────────────────────────────────────── */
-const WA = ({ size = 18, color = 'currentColor' }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-  </svg>
-)
+const formatNaira = (n: number) => `₦${n.toLocaleString('en-NG')}`
 
-/* ─────────────────────────────────────────────
-   ANIMATED COUNTER
-───────────────────────────────────────────── */
-function Counter({ to, suffix = '', prefix = '' }: { to: number; suffix?: string; prefix?: string }) {
-  const [count, setCount] = useState(0)
-  const ref = useRef<HTMLSpanElement>(null)
-  const started = useRef(false)
+function useReveal(threshold = 0.12) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !started.current) {
-        started.current = true
-        const duration = 1800
-        const start = performance.now()
-        const tick = (now: number) => {
-          const p = Math.min((now - start) / duration, 1)
-          const eased = 1 - Math.pow(1 - p, 4)
-          setCount(Math.floor(eased * to))
-          if (p < 1) requestAnimationFrame(tick)
-          else setCount(to)
-        }
-        requestAnimationFrame(tick)
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true)
+        observer.disconnect()
       }
-    }, { threshold: 0.5 })
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [to])
+    }, { threshold })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [threshold])
 
-  return <span ref={ref}>{prefix}{count}{suffix}</span>
+  return { ref, visible }
 }
 
-/* ─────────────────────────────────────────────
-   LOGO TICKER
-───────────────────────────────────────────── */
-const logos = [
-  {
-    name: 'Gmail',
-    svg: (
-      <svg viewBox="0 0 24 24" width="28" height="28">
-        <path fill="#EA4335" d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
-      </svg>
-    ),
-  },
-  {
-    name: 'Outlook',
-    svg: (
-      <svg viewBox="0 0 24 24" width="28" height="28">
-        <path fill="#0078D4" d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.87.2t-.85-.2q-.35-.21-.57-.55-.22-.33-.33-.75-.1-.42-.1-.86t.1-.87q.1-.43.34-.76.22-.34.59-.54.36-.2.87-.2t.86.2q.35.21.57.55.22.34.31.77.1.43.1.88zM24 12v9.38q0 .46-.33.8-.33.32-.8.32H7.13q-.46 0-.8-.33-.32-.33-.32-.8V18H1q-.41 0-.7-.3-.3-.29-.3-.7V7q0-.41.3-.7Q.58 6 1 6h6V2.55q0-.44.3-.75.3-.3.75-.3h12.93q.44 0 .75.3.3.3.3.75V10.85l1.24.72h.01q.1.07.18.18.07.12.07.25zm-6-8.25v3h3zm4.01 6.83l-3.01-1.75v3.51z"/>
-      </svg>
-    ),
-  },
-  {
-    name: 'WhatsApp',
-    svg: <WA size={28} color="#25D366" />,
-  },
-  {
-    name: 'Claude',
-    svg: (
-      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
-        <circle cx="12" cy="12" r="10" fill="#CC785C" opacity="0.15"/>
-        <circle cx="12" cy="12" r="10" stroke="#CC785C" strokeWidth="1.5" fill="none"/>
-        <path d="M8 12c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4" stroke="#CC785C" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
-      </svg>
-    ),
-  },
-  {
-    name: 'Supabase',
-    svg: (
-      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
-        <path d="M11.9 2.4L3 14.6h6.3L8 21.6l13-9.6h-6.5L11.9 2.4z" fill="#3ECF8E"/>
-      </svg>
-    ),
-  },
-  {
-    name: 'Google Drive',
-    svg: (
-      <svg viewBox="0 0 24 24" width="28" height="28">
-        <polygon fill="#4285F4" points="18.88,15.54 12,3.27 18.44,15.54"/>
-        <polygon fill="#34A853" points="5.12,15.54 12,3.27 5.56,15.54"/>
-        <polygon fill="#FBBC05" points="4.56,15.54 7.8,21 16.2,21 12.96,15.54"/>
-      </svg>
-    ),
-  },
-  {
-    name: 'Termii',
-    svg: (
-      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
-        <rect x="2" y="2" width="20" height="20" rx="6" fill="#0052CC" opacity="0.1"/>
-        <rect x="2" y="2" width="20" height="20" rx="6" stroke="#0052CC" strokeWidth="1.5" fill="none"/>
-        <path d="M8 12h8M12 8v8" stroke="#0052CC" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    name: 'Zoho',
-    svg: (
-      <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
-        <rect x="2" y="2" width="20" height="20" rx="6" fill="#E4261C" opacity="0.1"/>
-        <rect x="2" y="2" width="20" height="20" rx="6" stroke="#E4261C" strokeWidth="1.5" fill="none"/>
-        <path d="M6 9l6 3 6-3" stroke="#E4261C" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M6 12l6 3 6-3" stroke="#E4261C" strokeWidth="1.5" strokeLinecap="round" opacity="0.5"/>
-      </svg>
-    ),
-  },
-]
-
-function LogoTicker() {
-  const items = [...logos, ...logos, ...logos]
+function Arrow({ dark = false }: { dark?: boolean }) {
   return (
-    <div style={{ overflow: 'hidden', position: 'relative', padding: '0' }}>
-      <div style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: 80,
-        background: `linear-gradient(90deg, ${T.navy} 0%, transparent 100%)`,
-        zIndex: 2, pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute', right: 0, top: 0, bottom: 0, width: 80,
-        background: `linear-gradient(270deg, ${T.navy} 0%, transparent 100%)`,
-        zIndex: 2, pointerEvents: 'none',
-      }} />
-      <div style={{
-        display: 'flex', gap: 0,
-        animation: 'ticker 30s linear infinite',
-        width: 'max-content',
-      }}>
-        {items.map((logo, i) => (
-          <div key={i} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-            padding: '0 28px', flexShrink: 0,
-          }}>
-            <div style={{ opacity: 0.7 }}>{logo.svg}</div>
-            <span style={{ fontSize: 11, fontWeight: 600, color: T.gray, letterSpacing: '0.04em' }}>{logo.name}</span>
-          </div>
-        ))}
-      </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke={dark ? T.ink : T.cream} strokeWidth="2.4"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+function Check() {
+  return (
+    <span className="check">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="m4 8 2.3 2.3L12 4.7" stroke={T.gold} strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  )
+}
+
+function WA({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  )
+}
+
+function Eyebrow({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
+  return (
+    <div className={`eyebrow ${light ? 'eyebrow-light' : ''}`}>
+      <span />
+      {children}
     </div>
   )
 }
 
-/* ─────────────────────────────────────────────
-   FADE IN HOOK
-───────────────────────────────────────────── */
-function useFadeIn(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setVisible(true); obs.disconnect() }
-    }, { threshold })
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [threshold])
-  return { ref, visible }
+function MagneticButton({
+  children, href, secondary = false,
+}: {
+  children: React.ReactNode
+  href: string
+  secondary?: boolean
+}) {
+  return (
+    <Link href={href} className={`magnetic-btn ${secondary ? 'secondary-btn' : ''}`}>
+      <span>{children}</span>
+      <Arrow dark={secondary} />
+    </Link>
+  )
 }
 
-/* ─────────────────────────────────────────────
-   NAV
-───────────────────────────────────────────── */
 function Navbar() {
   const [scrolled, setScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const { isMobile, isTablet } = useBreakpoint()
-  const isSmall = isMobile || isTablet
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 40)
-    window.addEventListener('scroll', fn)
-    return () => window.removeEventListener('scroll', fn)
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  const links = ['How it works', 'Features', 'Pricing']
 
   return (
     <>
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: isMobile ? '0 4%' : '0 6%', height: 64,
-        background: scrolled || menuOpen ? 'rgba(11,23,36,0.98)' : 'transparent',
-        backdropFilter: scrolled || menuOpen ? 'blur(20px)' : 'none',
-        borderBottom: scrolled || menuOpen ? `1px solid ${T.border}` : '1px solid transparent',
-        transition: 'all 0.4s ease',
-      }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
-              <path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill="#0B1724"/>
-            </svg>
-          </div>
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Haelo</span>
+      <nav className={`nav ${scrolled || open ? 'nav-scrolled' : ''}`}>
+        <Link href="/" className="logo">haelo<span>.</span></Link>
+
+        <div className="nav-links">
+          {links.map(link => (
+            <a key={link} href={`#${link.toLowerCase().replace(/ /g, '-')}`}>{link}</a>
+          ))}
         </div>
 
-        {/* Desktop links */}
-        {!isSmall && (
-          <div style={{ display: 'flex', gap: 36 }}>
-            {['How it works', 'Features', 'Pricing'].map((l) => (
-              <a key={l} href={`#${l.toLowerCase().replace(/ /g, '-')}`} style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.55)', textDecoration: 'none', transition: 'color 0.2s' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
-              >{l}</a>
-            ))}
-          </div>
-        )}
-
-        {/* Desktop CTA / Mobile hamburger */}
-        {!isSmall ? (
-          <Link href="/auth/signup" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: T.lime, color: T.navy,
-            fontSize: 13, fontWeight: 800,
-            padding: '9px 20px', borderRadius: 100,
-            textDecoration: 'none', letterSpacing: '-0.01em',
-            transition: 'transform 0.2s',
-          }}>
-            Start free
-            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={T.navy} strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <div className="nav-actions">
+          <Link href="/auth/signup" className="nav-cta">
+            Start free <Arrow />
           </Link>
-        ) : (
-          <button
-            onClick={() => setMenuOpen(o => !o)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 5 }}
-          >
-            <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2, transition: 'all 0.3s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
-            <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2, transition: 'all 0.3s', opacity: menuOpen ? 0 : 1 }} />
-            <span style={{ display: 'block', width: 22, height: 2, background: '#fff', borderRadius: 2, transition: 'all 0.3s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+          <button className={`menu-button ${open ? 'is-open' : ''}`} onClick={() => setOpen(v => !v)}
+            aria-label="Toggle menu" aria-expanded={open}>
+            <i /><i /><i />
           </button>
-        )}
+        </div>
       </nav>
 
-      {/* Mobile menu dropdown */}
-      {isSmall && menuOpen && (
-        <div style={{
-          position: 'fixed', top: 64, left: 0, right: 0, zIndex: 199,
-          background: 'rgba(11,23,36,0.98)', backdropFilter: 'blur(20px)',
-          borderBottom: `1px solid ${T.border}`,
-          padding: '20px 6% 28px',
-          display: 'flex', flexDirection: 'column', gap: 0,
-        }}>
-          {['How it works', 'Features', 'Pricing'].map((l) => (
-            <a key={l} href={`#${l.toLowerCase().replace(/ /g, '-')}`}
-              onClick={() => setMenuOpen(false)}
-              style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.75)', textDecoration: 'none', padding: '14px 0', borderBottom: `1px solid ${T.border}` }}
-            >{l}</a>
-          ))}
-          <Link href="/auth/signup" onClick={() => setMenuOpen(false)} style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            background: T.lime, color: T.navy,
-            fontSize: 15, fontWeight: 800,
-            padding: '13px 20px', borderRadius: 100,
-            textDecoration: 'none', marginTop: 20,
-          }}>
-            Start free — 30 days
-          </Link>
-        </div>
-      )}
+      <div className={`mobile-menu ${open ? 'open' : ''}`}>
+        {links.map(link => (
+          <a key={link} href={`#${link.toLowerCase().replace(/ /g, '-')}`} onClick={() => setOpen(false)}>
+            {link}<Arrow dark />
+          </a>
+        ))}
+        <Link href="/auth/signup" onClick={() => setOpen(false)} className="mobile-cta">
+          Start free — 30 days <Arrow />
+        </Link>
+      </div>
     </>
   )
 }
 
-/* ─────────────────────────────────────────────
-   HERO
-───────────────────────────────────────────── */
 function Hero() {
-  const { isMobile, isTablet, isDesktop } = useBreakpoint()
+  const [active, setActive] = useState(0)
+
+  const notifications = [
+    { from: 'Tosin · Operations', subject: 'Rice order approval', time: 'Just now', text: 'Need approval on the rice order before Friday.' },
+    { from: 'Ada · Finance', subject: 'Q3 vendor invoice', time: '2m ago', text: 'Can you confirm the revised payment schedule?' },
+    { from: 'Kelechi · Projects', subject: 'Site update', time: '5m ago', text: 'The client has approved the next phase.' },
+  ]
+
+  useEffect(() => {
+    const id = window.setInterval(() => setActive(v => (v + 1) % notifications.length), 3800)
+    return () => window.clearInterval(id)
+  }, [notifications.length])
+
+  const current = notifications[active]
 
   return (
-    <section style={{
-      minHeight: '100vh', background: T.navy,
-      display: 'flex', alignItems: 'center',
-      padding: isMobile ? '100px 5% 60px' : isTablet ? '100px 6% 72px' : '100px 6% 80px',
-      position: 'relative', overflow: 'hidden',
-    }}>
-      {/* Ambient orbs */}
-      <div style={{ position: 'absolute', top: '-20%', right: '-10%', width: isMobile ? 300 : 700, height: isMobile ? 300 : 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,211,102,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: isMobile ? 250 : 500, height: isMobile ? 250 : 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,211,102,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)`, backgroundSize: '60px 60px' }} />
+    <section className="hero">
+      <div className="hero-grid" />
+      <div className="hero-glow hero-glow-one" />
+      <div className="hero-glow hero-glow-two" />
 
-      <div style={{
-        maxWidth: 1200, margin: '0 auto', width: '100%',
-        display: 'grid',
-        gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr',
-        gap: isDesktop ? 80 : 56,
-        alignItems: 'center', position: 'relative',
-      }}>
-        {/* Left */}
-        <div style={{ animation: 'fadeUp 0.8s ease both' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            border: `1px solid rgba(37,211,102,0.25)`,
-            background: 'rgba(37,211,102,0.08)',
-            color: T.lime, fontSize: 11, fontWeight: 700,
-            letterSpacing: '0.1em', textTransform: 'uppercase',
-            padding: '7px 14px', borderRadius: 100, marginBottom: 28,
-          }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: T.lime, display: 'inline-block', animation: 'blink 2s ease infinite' }} />
-            AI Chief of Staff
+      <div className="hero-inner">
+        <div className="hero-copy">
+          <div className="hero-kicker">
+            <span className="live-dot" />
+            AI CHIEF OF STAFF
           </div>
 
-          <h1 style={{
-            fontSize: isMobile ? '2.6rem' : isTablet ? '3.2rem' : 'clamp(3rem,5.5vw,5rem)',
-            fontWeight: 800, lineHeight: 1.04,
-            letterSpacing: '-0.04em', color: '#fff',
-            marginBottom: 20,
-          }}>
-            Be{' '}
-            <span style={{
-              background: `linear-gradient(120deg, ${T.lime} 0%, #7fffb0 100%)`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}>everywhere.</span>
-            <br />Miss nothing.
+          <h1>
+            Be everywhere.
+            <br />
+            <span>Miss nothing.</span>
           </h1>
 
-          <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.72, color: 'rgba(255,255,255,0.5)', marginBottom: 36, maxWidth: 440, fontWeight: 400 }}>
-            Haelo reads every internal email, summarises it, drafts the reply using your company&apos;s own knowledge, and sends it to your WhatsApp. One tap. Done.
+          <p>
+            Haelo reads internal email, understands your company,
+            drafts the response and brings it to your WhatsApp.
+            You make the call.
           </p>
 
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 44 }}>
-            <Link href="/auth/signup" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: T.lime, color: T.navy,
-              fontSize: isMobile ? 14 : 15, fontWeight: 800,
-              padding: isMobile ? '12px 22px' : '14px 28px', borderRadius: 100,
-              textDecoration: 'none', letterSpacing: '-0.01em',
-              transition: 'all 0.2s',
-            }}>
-              Start free — 30 days
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={T.navy} strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </Link>
-            <a href="https://wa.me/2349000000000" target="_blank" rel="noopener noreferrer" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 9,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#fff', fontSize: isMobile ? 14 : 15, fontWeight: 600,
-              padding: isMobile ? '12px 18px' : '14px 24px', borderRadius: 100,
-              textDecoration: 'none', transition: 'all 0.2s',
-            }}>
-              <WA size={17} color={T.lime} />
-              Talk to us
+          <div className="hero-actions">
+            <MagneticButton href="/auth/signup">Start free — 30 days</MagneticButton>
+            <a className="outline-btn" href="https://wa.me/2349000000000"
+              target="_blank" rel="noopener noreferrer">
+              <WA size={16} color={T.green} /> Talk to us
             </a>
           </div>
 
-          {/* Social proof */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ display: 'flex' }}>
-              {[{ i: 'A', c: '#1a3a5c' }, { i: 'K', c: '#1d4a35' }, { i: 'T', c: '#2a1a4a' }, { i: 'O', c: '#1a2a4a' }].map((a, idx) => (
-                <div key={idx} style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  border: `2px solid ${T.navy}`, background: a.c,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.8)',
-                  marginLeft: idx === 0 ? 0 : -8,
-                }}>{a.i}</div>
-              ))}
-            </div>
-            <div>
-              <div style={{ display: 'flex', gap: 1, marginBottom: 2 }}>
-                {[...Array(5)].map((_, i) => <span key={i} style={{ color: T.lime, fontSize: 12 }}>★</span>)}
+          <div className="trust-row">
+            <span><Check /> No credit card</span>
+            <span><Check /> Set up in 15 min</span>
+            <span><Check /> Cancel anytime</span>
+          </div>
+        </div>
+
+        <div className="hero-product">
+          <div className="product-orbit orbit-one" />
+          <div className="product-orbit orbit-two" />
+
+          <div className="whatsapp-card">
+            <div className="wa-top">
+              <div className="wa-avatar">H</div>
+              <div>
+                <strong>Haelo</strong>
+                <small>AI Chief of Staff · online</small>
               </div>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>Trusted by execs across Nigeria</p>
+              <span className="wa-menu">•••</span>
             </div>
-          </div>
-        </div>
 
-        {/* Right: WA Mockup */}
-        {!isMobile && (
-          <div style={{ display: 'flex', justifyContent: isDesktop ? 'flex-end' : 'center', animation: 'fadeUp 0.8s 0.2s ease both' }}>
-            <WAMockup />
-          </div>
-        )}
-      </div>
-    </section>
-  )
-}
-
-/* ─────────────────────────────────────────────
-   WA MOCKUP
-───────────────────────────────────────────── */
-function WAMockup() {
-  return (
-    <div style={{
-      width: 300, borderRadius: 32,
-      boxShadow: '0 40px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
-      overflow: 'hidden', position: 'relative',
-      background: '#1a1a1a',
-    }}>
-      {/* Status bar */}
-      <div style={{ background: '#075e54', padding: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>9:41</span>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <svg width={14} height={10} viewBox="0 0 14 10" fill="white"><rect x="0" y="4" width="2" height="6" rx="1"/><rect x="3" y="2" width="2" height="8" rx="1"/><rect x="6" y="0" width="2" height="10" rx="1"/><rect x="9" y="1" width="2" height="9" rx="1"/></svg>
-            <div style={{ display: 'flex', gap: 1 }}>
-              <div style={{ width: 6, height: 10, borderRadius: 2, background: '#fff', border: '1px solid rgba(255,255,255,0.5)' }}>
-                <div style={{ width: '100%', height: '70%', borderRadius: 1, background: '#fff' }} />
+            <div className="wa-body">
+              <div className="date-pill">TODAY</div>
+              <div className="message-bubble">
+                <small>NEW INTERNAL EMAIL</small>
+                <strong>{current.subject}</strong>
+                <p>{current.text}</p>
+                <div className="message-from">
+                  <span>{current.from}</span>
+                  <span>{current.time}</span>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-        {/* Chat header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: '50%', background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg viewBox="0 0 20 20" fill="none" width={20} height={20}>
-              <path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill="#0B1724"/>
-            </svg>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>Haelo</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>AI Chief of Staff · online</div>
-          </div>
-        </div>
-      </div>
 
-      {/* Chat body */}
-      <div style={{ background: '#ece5dd', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ textAlign: 'center', marginBottom: 4 }}>
-          <span style={{ fontSize: 11, background: 'rgba(0,0,0,0.15)', color: '#fff', padding: '3px 10px', borderRadius: 100, fontWeight: 600 }}>TODAY</span>
-        </div>
-        <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', padding: '12px 14px', maxWidth: '94%', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'inline-block', background: 'rgba(37,211,102,0.12)', color: '#1a7a42', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 100, marginBottom: 10, border: '1px solid rgba(37,211,102,0.2)' }}>
-            📧 New internal email
-          </div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#999', marginBottom: 2 }}>FROM</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 10 }}>Tosin Adeyemi <span style={{ fontWeight: 400, color: '#777' }}>· Ops Manager</span></div>
-          <div style={{ height: 1, background: '#f0f0f0', marginBottom: 10 }} />
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#999', marginBottom: 3 }}>SUMMARY</div>
-          <div style={{ fontSize: 13, lineHeight: 1.55, color: '#333', marginBottom: 10 }}>
-            Requesting approval to reorder 50kg of rice before Friday&apos;s service. Vendor confirmed availability.
-          </div>
-          <div style={{ height: 1, background: '#f0f0f0', marginBottom: 10 }} />
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#999', marginBottom: 3 }}>SUGGESTED REPLY</div>
-          <div style={{ fontSize: 13, lineHeight: 1.55, color: '#333', marginBottom: 12 }}>
-            Hi Tosin, approved — please proceed and send invoice for records.
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: 'none', background: T.lime, color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>✓ YES — Send</button>
-            <button style={{ flex: 1, padding: '8px 0', borderRadius: 10, border: '1px solid #e0e0e0', background: '#fafafa', color: '#555', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✗ NO — Edit</button>
-          </div>
-          <div style={{ fontSize: 10, color: '#aaa', textAlign: 'right', marginTop: 8, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3 }}>
-            2m ago
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#34B7F1" strokeWidth={2.5} strokeLinecap="round"><path d="M1 12l5 5L12 5M8 12l5 5 7-12"/></svg>
-          </div>
-        </div>
-        <div style={{ background: '#dcf8c6', borderRadius: '16px 4px 16px 16px', padding: '10px 14px', maxWidth: '85%', alignSelf: 'flex-end', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: '#111' }}>Hi Tosin, approved — please proceed and send invoice for records.</div>
-          <div style={{ fontSize: 10, color: '#aaa', textAlign: 'right', marginTop: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3 }}>
-            sent via Haelo
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#34B7F1" strokeWidth={2.5} strokeLinecap="round"><path d="M1 12l5 5L12 5M8 12l5 5 7-12"/></svg>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', borderRadius: '4px 16px 16px 16px', padding: '11px 14px', width: 68, boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}>
-          {[0, 0.18, 0.36].map((d, i) => (
-            <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#bbb', animation: `typingdot 1.2s ${d}s infinite` }} />
-          ))}
-        </div>
-      </div>
-
-      {/* Input bar */}
-      <div style={{ background: '#f0f0f0', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, background: '#fff', borderRadius: 24, padding: '8px 14px', fontSize: 13, color: '#999' }}>Message</div>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────
-   STATS
-───────────────────────────────────────────── */
-function Stats() {
-  const { isMobile } = useBreakpoint()
-  const stats = [
-    { to: 60, suffix: 's', label: 'Email to WhatsApp', prefix: '<' },
-    { to: 90, suffix: '%+', label: 'Approved first try' },
-    { to: 10, suffix: ' min', label: 'Daily inbox time', prefix: '<' },
-    { to: 99, suffix: '.5%', label: 'Platform uptime' },
-  ]
-  const { ref, visible } = useFadeIn()
-
-  return (
-    <div ref={ref} style={{ background: T.navy2, borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: isMobile ? '48px 5%' : '64px 6%' }}>
-      <div style={{
-        maxWidth: 1200, margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)',
-        gap: isMobile ? '32px 0' : 0,
-      }}>
-        {stats.map((s, i) => (
-          <div key={s.label} style={{
-            textAlign: 'center', padding: isMobile ? '0 16px' : '0 32px',
-            borderRight: isMobile
-              ? (i % 2 === 0 ? `1px solid ${T.border}` : 'none')
-              : (i < 3 ? `1px solid ${T.border}` : 'none'),
-            borderBottom: isMobile && i < 2 ? `1px solid ${T.border}` : 'none',
-            paddingBottom: isMobile && i < 2 ? 32 : 0,
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateY(0)' : 'translateY(20px)',
-            transition: `opacity 0.6s ${i * 0.1}s ease, transform 0.6s ${i * 0.1}s ease`,
-          }}>
-            <div style={{ fontSize: isMobile ? '1.8rem' : 'clamp(2.2rem,3vw,3rem)', fontWeight: 800, color: T.lime, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 8 }}>
-              {visible ? <Counter to={s.to} suffix={s.suffix} prefix={s.prefix ?? ''} /> : `${s.prefix ?? ''}0${s.suffix}`}
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 500, color: T.gray, letterSpacing: '0.02em' }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────
-   HOW IT WORKS
-───────────────────────────────────────────── */
-function HowItWorks() {
-  const { isMobile, isTablet } = useBreakpoint()
-  const steps = [
-    { n: '01', title: 'Email arrives', body: 'A staff member sends an email to your company address. Haelo intercepts it in real time.' },
-    { n: '02', title: 'AI understands', body: 'Your Business Bible tells Haelo who the sender is, what the context means, and how your company responds.' },
-    { n: '03', title: 'WhatsApp delivery', body: 'You receive a clean card: sender, summary, and a suggested reply — all in one WhatsApp message.' },
-    { n: '04', title: 'One tap', body: 'YES sends immediately. NO lets you redirect. Do nothing — Haelo auto-sends after your configured timer.' },
-  ]
-  const { ref, visible } = useFadeIn()
-
-  return (
-    <section id="how-it-works" style={{ padding: isMobile ? '80px 5%' : '120px 6%', background: T.navy }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ marginBottom: isMobile ? 48 : 80, textAlign: 'center' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime, marginBottom: 16 }}>How it works</p>
-          <h2 style={{ fontSize: isMobile ? '1.8rem' : 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: '#fff', marginBottom: 16, lineHeight: 1.1 }}>
-            From inbox to decision<br />in under 60 seconds.
-          </h2>
-          <p style={{ fontSize: 16, color: T.gray, maxWidth: 460, margin: '0 auto', lineHeight: 1.7 }}>
-            No app to check. No inbox to manage. Just your WhatsApp and one tap.
-          </p>
-        </div>
-
-        <div ref={ref} style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : 'repeat(4,1fr)',
-          gap: 1, background: T.border,
-        }}>
-          {steps.map((s, i) => (
-            <div key={s.n} style={{
-              background: T.navy, padding: isMobile ? '32px 24px' : '44px 32px',
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(24px)',
-              transition: `opacity 0.6s ${i * 0.12}s ease, transform 0.6s ${i * 0.12}s ease`,
-            }}>
-              <div style={{ fontSize: '2.4rem', fontWeight: 800, color: 'rgba(255,255,255,0.06)', letterSpacing: '-0.06em', marginBottom: 28, lineHeight: 1 }}>{s.n}</div>
-              <div style={{ width: 36, height: 2, background: T.lime, marginBottom: 24, borderRadius: 1 }} />
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.02em' }}>{s.title}</div>
-              <div style={{ fontSize: 14, lineHeight: 1.7, color: T.gray }}>{s.body}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA strip */}
-        <div style={{
-          marginTop: 1, background: T.navy2,
-          padding: isMobile ? '24px 24px' : '32px 48px',
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center',
-          gap: 20, border: `1px solid ${T.border}`,
-        }}>
-          <p style={{ fontSize: 15, color: T.gray }}>Want to see it live? We&apos;ll walk you through in real time.</p>
-          <a href="https://wa.me/2349000000000" target="_blank" rel="noopener noreferrer" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 9,
-            background: T.lime, color: T.navy,
-            fontSize: 14, fontWeight: 800, padding: '12px 22px', borderRadius: 100,
-            textDecoration: 'none', flexShrink: 0,
-          }}>
-            <WA size={16} color={T.navy} /> Open WhatsApp
-          </a>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─────────────────────────────────────────────
-   FEATURES
-───────────────────────────────────────────── */
-function Features() {
-  const { isMobile, isTablet } = useBreakpoint()
-  const features = [
-    { title: 'Real-time email monitoring', body: '24/7 watch on your company domain. Nothing external. Nothing missed.' },
-    { title: 'Business Bible', body: 'One upload. Every response after that is grounded in how your company actually operates.' },
-    { title: 'WhatsApp first', body: 'No new app. No new login. The interface is WhatsApp — the tool you already open 40 times a day.' },
-    { title: 'Configurable timer', body: 'Auto-Send, Remind & Wait, or Hybrid — set globally or per-sender. You are always in control.' },
-    { title: 'Staff directory', body: 'Every person recognised by name, role, and department. Bulk CSV import. Unknown-sender queue.' },
-    { title: 'Activity log', body: 'Every email. Every draft. Every outcome. Filter, export, and audit any time.' },
-    { title: 'AI response engine', body: 'Responses calibrated to context, tone, and your company knowledge — not generic LLM output.' },
-    { title: 'Security by design', body: 'OAuth only. No stored passwords. Encrypted at rest and in transit. 30-day retention. Per-client isolation.' },
-  ]
-  const { ref, visible } = useFadeIn()
-  const isSmall = isMobile || isTablet
-
-  return (
-    <section id="features" style={{ padding: isMobile ? '80px 5%' : '120px 6%', background: T.offwhite }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isSmall ? '1fr' : '1fr 2fr',
-          gap: isSmall ? 48 : 80, alignItems: 'start',
-        }}>
-          <div style={{ position: isSmall ? 'static' : 'sticky', top: 100 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime2, marginBottom: 16 }}>Features</p>
-            <h2 style={{ fontSize: isMobile ? '1.8rem' : 'clamp(2rem,3vw,2.8rem)', fontWeight: 800, letterSpacing: '-0.035em', color: T.navy, lineHeight: 1.1, marginBottom: 20 }}>
-              Everything it takes.<br />Nothing it doesn&apos;t.
-            </h2>
-            <p style={{ fontSize: 16, color: T.gray, lineHeight: 1.7 }}>Eight components working as one. Built for executives who have no time to spare.</p>
-          </div>
-          <div ref={ref} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 1, background: T.borderL }}>
-            {features.map((f, i) => (
-              <div key={f.title} style={{
-                background: T.offwhite, padding: isMobile ? '28px 24px' : '32px 28px',
-                opacity: visible ? 1 : 0,
-                transform: visible ? 'translateY(0)' : 'translateY(20px)',
-                transition: `opacity 0.5s ${i * 0.06}s ease, transform 0.5s ${i * 0.06}s ease`,
-                cursor: 'default',
-              }}>
-                <div style={{ width: 28, height: 2, background: T.lime2, marginBottom: 20, borderRadius: 1 }} />
-                <div style={{ fontSize: 15, fontWeight: 800, color: T.navy, marginBottom: 8, letterSpacing: '-0.02em' }}>{f.title}</div>
-                <div style={{ fontSize: 13, color: T.gray, lineHeight: 1.7 }}>{f.body}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─────────────────────────────────────────────
-   INTEGRATIONS
-───────────────────────────────────────────── */
-function Integrations() {
-  const { isMobile } = useBreakpoint()
-  const { ref, visible } = useFadeIn()
-  return (
-    <section id="integrations" style={{ padding: isMobile ? '72px 0' : '100px 0', background: T.navy, overflow: 'hidden' }}>
-      <div style={{ maxWidth: 1200, margin: `0 auto ${isMobile ? 40 : 56}px`, padding: '0 6%', textAlign: 'center' }}>
-        <div ref={ref} style={{
-          opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'opacity 0.6s ease, transform 0.6s ease',
-        }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime, marginBottom: 16 }}>Integrations</p>
-          <h2 style={{ fontSize: isMobile ? '1.8rem' : 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: '#fff', marginBottom: 16, lineHeight: 1.1 }}>
-            Works with what you already use.
-          </h2>
-          <p style={{ fontSize: 16, color: T.gray, maxWidth: 440, margin: '0 auto', lineHeight: 1.7 }}>
-            Connect your email in minutes. No migration. No IT ticket.
-          </p>
-        </div>
-      </div>
-      <LogoTicker />
-      <p style={{ textAlign: 'center', fontSize: 13, color: T.gray, marginTop: 40, padding: '0 6%' }}>
-        Slack and Zoho CRM arriving in Version 2.0
-      </p>
-    </section>
-  )
-}
-
-/* ─────────────────────────────────────────────
-   PRICING
-───────────────────────────────────────────── */
-function Pricing() {
-  const { isMobile, isTablet } = useBreakpoint()
-  const plans = [
-    {
-      name: 'Solo', price: '₦150,000', sub: '1 executive · per month', featured: false,
-      cta: 'Start free', href: '/auth/signup', external: false,
-      features: ['1 WhatsApp seat', 'Gmail, Outlook, or Zoho Mail', 'Business Bible — up to 20 pages', 'Full dashboard access', 'Activity log', 'Standard 10-min timer'],
-    },
-    {
-      name: 'Team', price: '₦500,000', sub: 'Up to 5 people · per month', featured: true,
-      cta: 'Start free', href: '/auth/signup', external: false,
-      features: ['Up to 5 seats', 'All email providers', 'Unlimited Business Bible', 'Per-sender timer config', 'Shared dashboard', 'Priority support', 'Monthly report'],
-    },
-    {
-      name: 'Enterprise', price: 'Custom', sub: '6+ people · annual options', featured: false,
-      cta: 'Talk to us', href: 'https://wa.me/2349000000000', external: true,
-      features: ['Unlimited seats', 'Dedicated onboarding', 'Custom integrations & SLA', 'Bespoke Business Bible', 'Account manager', 'White-glove support'],
-    },
-  ]
-  const { ref, visible } = useFadeIn()
-
-  return (
-    <section id="pricing" style={{ padding: isMobile ? '80px 5%' : '120px 6%', background: T.offwhite }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: isMobile ? 48 : 72 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime2, marginBottom: 16 }}>Pricing</p>
-          <h2 style={{ fontSize: isMobile ? '1.8rem' : 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: T.navy, marginBottom: 16, lineHeight: 1.1 }}>
-            Flat rate. No surprises.
-          </h2>
-          <p style={{ fontSize: 16, color: T.gray, maxWidth: 400, margin: '0 auto', lineHeight: 1.7 }}>
-            First 30 days free on every plan. Cancel any time.
-          </p>
-        </div>
-
-        <div ref={ref} style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : 'repeat(3,1fr)',
-          gap: isMobile ? 1 : 1, background: T.borderL,
-        }}>
-          {plans.map((plan, i) => (
-            <div key={plan.name} style={{
-              background: plan.featured ? T.navy : '#fff',
-              padding: isMobile ? '36px 28px' : '40px 32px',
-              position: 'relative',
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(20px)',
-              transition: `opacity 0.5s ${i * 0.12}s ease, transform 0.5s ${i * 0.12}s ease`,
-            }}>
-              {plan.featured && (
-                <div style={{
-                  position: 'absolute', top: 20, right: 20,
-                  background: T.lime, color: T.navy,
-                  fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-                  padding: '4px 12px', borderRadius: 100,
-                }}>Popular</div>
-              )}
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.lime, marginBottom: 20 }}>{plan.name}</div>
-              <div style={{ fontSize: isMobile ? '1.8rem' : 'clamp(1.8rem,2.5vw,2.4rem)', fontWeight: 800, letterSpacing: '-0.04em', color: plan.featured ? '#fff' : T.navy, marginBottom: 4, lineHeight: 1 }}>{plan.price}</div>
-              <div style={{ fontSize: 13, color: plan.featured ? 'rgba(255,255,255,0.4)' : T.gray, marginBottom: 32 }}>{plan.sub}</div>
-              <div style={{ height: 1, background: plan.featured ? T.border : T.borderL, marginBottom: 28 }} />
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
-                {plan.features.map((f) => (
-                  <li key={f} style={{ display: 'flex', gap: 10, fontSize: 14, color: plan.featured ? 'rgba(255,255,255,0.65)' : T.gray, lineHeight: 1.4, alignItems: 'flex-start' }}>
-                    <svg width={16} height={16} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                      <circle cx="8" cy="8" r="8" fill="rgba(37,211,102,0.15)"/>
-                      <path d="M5 8l2 2 4-4" stroke={T.lime} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              {plan.external ? (
-                <a href={plan.href} target="_blank" rel="noopener noreferrer" style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  width: '100%', padding: '13px', borderRadius: 100,
-                  background: 'rgba(255,255,255,0.08)', color: '#fff',
-                  border: `1px solid rgba(255,255,255,0.12)`,
-                  fontSize: 14, fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em',
-                  boxSizing: 'border-box',
-                }}>
-                  <WA size={15} color="#fff" /> {plan.cta}
-                </a>
-              ) : (
-                <Link href={plan.href} style={{
-                  display: 'block', width: '100%', padding: 13, borderRadius: 100, textAlign: 'center',
-                  background: plan.featured ? T.lime : T.navy,
-                  color: plan.featured ? T.navy : '#fff',
-                  fontSize: 14, fontWeight: 800, textDecoration: 'none', letterSpacing: '-0.01em',
-                  boxSizing: 'border-box',
-                }}>
-                  {plan.cta} →
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-        <p style={{ textAlign: 'center', fontSize: 13, color: T.gray, marginTop: 20 }}>All prices in Nigerian Naira. USD pricing on request.</p>
-      </div>
-    </section>
-  )
-}
-
-/* ─────────────────────────────────────────────
-   TESTIMONIALS
-───────────────────────────────────────────── */
-function Testimonials() {
-  const { isMobile, isTablet } = useBreakpoint()
-  const testimonials = [
-    { quote: 'I used to spend two hours on internal emails every morning. Haelo handles all of it before I even sit down.', name: 'Adaeze O.', role: 'CEO, Retail Group — Lagos', init: 'AO', bg: '#1a3040' },
-    { quote: "The first time Haelo replied for me, my Ops Manager said it was the fastest reply I'd ever given. Exactly right.", name: 'Kunle A.', role: 'MD, Construction — Abuja', init: 'KA', bg: '#1a3a28' },
-    { quote: 'Five senior managers. Response time dropped from two days to fifteen minutes. ROI was clear in week one.', name: 'Temi B.', role: 'COO, Financial Services — Lagos', init: 'TB', bg: '#2a1a40' },
-  ]
-  const { ref, visible } = useFadeIn()
-
-  return (
-    <section style={{ padding: isMobile ? '80px 5%' : '120px 6%', background: T.navy }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: isMobile ? 48 : 72 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: T.lime, marginBottom: 16 }}>What executives say</p>
-          <h2 style={{ fontSize: isMobile ? '1.8rem' : 'clamp(2rem,3.5vw,3rem)', fontWeight: 800, letterSpacing: '-0.035em', color: '#fff', lineHeight: 1.1 }}>
-            Your team never waits.
-          </h2>
-        </div>
-        <div ref={ref} style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : 'repeat(3,1fr)',
-          gap: 1, background: T.border,
-        }}>
-          {testimonials.map((t, i) => (
-            <div key={t.name} style={{
-              background: T.navy2, padding: isMobile ? '36px 28px' : '44px 36px',
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(24px)',
-              transition: `opacity 0.6s ${i * 0.12}s ease, transform 0.6s ${i * 0.12}s ease`,
-            }}>
-              <div style={{ display: 'flex', gap: 1, marginBottom: 24 }}>
-                {[...Array(5)].map((_, j) => <span key={j} style={{ color: T.lime, fontSize: 14 }}>★</span>)}
-              </div>
-              <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.75)', marginBottom: 28, fontStyle: 'italic' }}>
-                &ldquo;{t.quote}&rdquo;
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }}>{t.init}</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>{t.name}</div>
-                  <div style={{ fontSize: 12, color: T.gray }}>{t.role}</div>
+              <div className="draft-bubble">
+                <div className="draft-label"><span /> DRAFT REPLY</div>
+                <p>
+                  Approved — please proceed and send the invoice once
+                  the order is confirmed.
+                </p>
+                <div className="bubble-actions">
+                  <button>Approve</button>
+                  <button>Edit</button>
+                  <button>Skip</button>
                 </div>
               </div>
             </div>
+
+            <div className="wa-bottom">
+              <span>Haelo is waiting for your decision</span>
+              <i />
+            </div>
+          </div>
+
+          <div className="float-card float-card-one">
+            <span className="float-icon">✦</span>
+            <div><b>Context understood</b><small>Business Bible applied</small></div>
+          </div>
+          <div className="float-card float-card-two">
+            <span className="pulse-check">✓</span>
+            <div><b>One tap</b><small>Reply sent securely</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="scroll-cue">
+        <span>SCROLL TO EXPLORE</span>
+        <i />
+      </div>
+    </section>
+  )
+}
+
+function FlowStrip() {
+  const { ref, visible } = useReveal()
+  const steps = [
+    ['01', 'Email arrives', 'Tosin · Operations', 'Need approval on the rice order.'],
+    ['02', 'Haelo understands', 'Business Bible', 'Context, tone and policy applied.'],
+    ['03', 'You decide', 'WhatsApp', 'Approve. Edit. Or skip.'],
+  ]
+
+  return (
+    <div ref={ref} className={`flow-strip reveal ${visible ? 'visible' : ''}`}>
+      {steps.map((step, i) => (
+        <div className="flow-step" key={step[0]}>
+          <span className="flow-number">{step[0]}</span>
+          <div>
+            <small>{step[1]}</small>
+            <strong>{step[2]}</strong>
+            <p>{step[3]}</p>
+          </div>
+          {i < 2 && <span className="flow-arrow"><Arrow dark /></span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Ledger() {
+  const { ref, visible } = useReveal()
+  const items = [
+    ['<60s', 'From an email landing to a drafted reply on your WhatsApp.'],
+    ['1 tap', 'Approve, edit or skip without opening another app.'],
+    ['24/7', 'Your internal inbox watched while you focus elsewhere.'],
+  ]
+
+  return (
+    <section className="ledger">
+      <div ref={ref} className={`ledger-inner reveal ${visible ? 'visible' : ''}`}>
+        {items.map(([big, text], i) => (
+          <div className="ledger-item" key={big}>
+            <span className="ledger-index">0{i + 1}</span>
+            <strong>{big}</strong>
+            <p>{text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function HowItWorks() {
+  const { ref, visible } = useReveal()
+  const steps = [
+    { n: '01', title: 'Email arrives', body: 'A staff member emails your company address. Haelo sees it the moment it lands.' },
+    { n: '02', title: 'Context is applied', body: 'Your Business Bible tells Haelo who people are and how your company handles situations like this.' },
+    { n: '03', title: 'A decision reaches you', body: 'A clean WhatsApp card shows who sent it, what they need and a reply ready to review.' },
+    { n: '04', title: 'You stay in control', body: 'Approve as-is, ask for a change or skip it. Nothing is sent until you say so.' },
+  ]
+
+  return (
+    <section id="how-it-works" className="section cream-section">
+      <div className="section-shell">
+        <Eyebrow>How it works</Eyebrow>
+        <div className="section-heading split-heading">
+          <h2>Four steps.<br /><em>Zero inbox anxiety.</em></h2>
+          <p>Designed around the way busy executives already work — not another dashboard demanding your attention.</p>
+        </div>
+
+        <div ref={ref} className={`steps-grid reveal ${visible ? 'visible' : ''}`}>
+          {steps.map((s, i) => (
+            <div className="step-card" key={s.n}>
+              <div className="step-top">
+                <span>{s.n}</span>
+                <i />
+              </div>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+              <div className="step-line" />
+              <span className="step-arrow"><Arrow dark /></span>
+            </div>
+          ))}
+        </div>
+
+        <FlowStrip />
+      </div>
+    </section>
+  )
+}
+
+function Features() {
+  const { ref, visible } = useReveal()
+  const features = [
+    ['01', 'Real-time email monitoring', 'A constant watch on your company domain.'],
+    ['02', 'The Business Bible', 'One source of truth for how your company responds.'],
+    ['03', 'WhatsApp-first', 'No new login, no new app. Decisions where you already are.'],
+    ['04', 'Configurable timer', 'Auto-send, remind-and-wait, or a hybrid workflow.'],
+    ['05', 'Staff directory', 'People recognised by name, role and department.'],
+    ['06', 'Activity log', 'Every email, draft and outcome, filterable and exportable.'],
+    ['07', 'Context-aware drafting', 'Replies grounded in company knowledge and tone.'],
+    ['08', 'Security by design', 'OAuth only. Encrypted in transit and at rest.'],
+  ]
+
+  return (
+    <section id="features" className="section feature-section">
+      <div className="section-shell">
+        <div className="feature-intro">
+          <Eyebrow>Features</Eyebrow>
+          <h2>Everything it takes.<br /><em>Nothing it doesn’t.</em></h2>
+          <p>Eight pieces working as one system, built for people who have no time to waste on inbox administration.</p>
+          <div className="feature-stamp">BUILT FOR<br /><b>DECISION MAKERS</b></div>
+        </div>
+
+        <div ref={ref} className={`feature-list reveal ${visible ? 'visible' : ''}`}>
+          {features.map(([n, title, body], i) => (
+            <div className="feature-row" key={n}>
+              <span className="feature-number">{n}</span>
+              <div className="feature-copy">
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </div>
+              <span className="feature-plus">+</span>
+            </div>
           ))}
         </div>
       </div>
@@ -876,51 +418,183 @@ function Testimonials() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   FINAL CTA
-───────────────────────────────────────────── */
-function FinalCTA() {
-  const { isMobile } = useBreakpoint()
-  const { ref, visible } = useFadeIn()
+function Integrations() {
+  const providers = ['Gmail', 'Outlook', 'Zoho Mail', 'WhatsApp Business', 'Google Drive']
   return (
-    <section style={{ padding: isMobile ? '96px 5%' : '140px 6%', background: T.offwhite, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 500, background: 'radial-gradient(ellipse, rgba(37,211,102,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div ref={ref} style={{
-        maxWidth: 680, margin: '0 auto', textAlign: 'center', position: 'relative',
-        opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(32px)',
-        transition: 'opacity 0.8s ease, transform 0.8s ease',
-      }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: T.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-          <svg viewBox="0 0 20 20" fill="none" width={24} height={24}>
-            <path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill={T.lime}/>
-          </svg>
+    <section className="integrations">
+      <div className="integration-glow" />
+      <div className="integration-inner">
+        <Eyebrow light>Fits your stack</Eyebrow>
+        <h2>Your tools stay.<br /><span>Haelo connects them.</span></h2>
+        <div className="integration-list">
+          {providers.map((p, i) => (
+            <div className="integration-item" key={p}>
+              <span>0{i + 1}</span>
+              <strong>{p}</strong>
+            </div>
+          ))}
         </div>
-        <h2 style={{ fontSize: isMobile ? '2rem' : 'clamp(2.4rem,4.5vw,3.8rem)', fontWeight: 800, letterSpacing: '-0.04em', color: T.navy, lineHeight: 1.06, marginBottom: 20 }}>
-          Your team deserves<br />a response today.
-        </h2>
-        <p style={{ fontSize: isMobile ? 16 : 18, color: T.gray, marginBottom: 44, lineHeight: 1.7 }}>
-          First 30 days free. No credit card required.<br />Set up in under 15 minutes.
+        <p className="integration-note">Slack and Zoho CRM arriving in Version 2.0</p>
+      </div>
+    </section>
+  )
+}
+
+function PricingCalculator() {
+  const [seats, setSeats] = useState(3)
+  const { total, breakdown, isCustom } = computeBilling(seats)
+  const nextRate = seats < SELF_SERVE_MAX
+    ? TIERS.find(t => seats + 1 >= t.from && seats + 1 <= t.to)?.rate ?? null
+    : null
+
+  const included = [
+    'Add as many inboxes as you need',
+    'All email providers',
+    'Unlimited Business Bible size',
+    'Custom timer per person',
+    'Shared team dashboard',
+    'Priority support',
+  ]
+
+  return (
+    <div className="pricing-card">
+      <div className="calculator">
+        <div className="calculator-head">
+          <div>
+            <small>ESTIMATE YOUR BILL</small>
+            <h3>Built around your team.</h3>
+          </div>
+          <span className="live-price">LIVE</span>
+        </div>
+
+        <p className="calculator-copy">
+          Pay per inbox. The rate drops automatically as your team grows.
         </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/auth/signup" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: T.navy, color: '#fff',
-            fontSize: isMobile ? 14 : 15, fontWeight: 800,
-            padding: isMobile ? '13px 24px' : '15px 30px', borderRadius: 100,
-            textDecoration: 'none', letterSpacing: '-0.01em',
-          }}>
-            Create your account
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </Link>
-          <a href="https://wa.me/2349000000000" target="_blank" rel="noopener noreferrer" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 9,
-            background: 'transparent', color: T.lime2,
-            border: `1.5px solid rgba(29,186,87,0.3)`,
-            fontSize: isMobile ? 14 : 15, fontWeight: 800,
-            padding: isMobile ? '13px 22px' : '15px 28px', borderRadius: 100,
-            textDecoration: 'none',
-          }}>
-            <WA size={17} color={T.lime2} /> Start on WhatsApp
+
+        <div className="seat-control">
+          <div className="seat-label">
+            <span>Team members</span>
+            <strong>{seats}{seats >= SELF_SERVE_MAX ? '+' : ''}</strong>
+          </div>
+          <input type="range" min={1} max={16} value={seats}
+            onChange={e => setSeats(Number(e.target.value))} />
+          <div className="range-labels"><span>1</span><span>15+</span></div>
+        </div>
+
+        {isCustom ? (
+          <div className="custom-box">
+            <span>16+</span>
+            <div><strong>Custom pricing</strong><p>Dedicated onboarding and a rate suited to your organisation.</p></div>
+          </div>
+        ) : (
+          <div className="breakdown">
+            {breakdown.map(b => (
+              <div className="breakdown-row" key={b.label}>
+                <span>{b.label}<small>{formatNaira(b.rate)} / seat</small></span>
+                <strong>{formatNaira(b.subtotal)}</strong>
+              </div>
+            ))}
+            {nextRate !== null && breakdown.length && nextRate < breakdown[breakdown.length - 1].rate && (
+              <div className="rate-note">Add one more seat and the rate drops to {formatNaira(nextRate)}.</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="price-summary">
+        <div>
+          <small>ESTIMATED MONTHLY TOTAL</small>
+          <div className="price-total">{isCustom ? 'Custom' : formatNaira(total)}</div>
+          {!isCustom && <p>per month · {seats} {seats === 1 ? 'seat' : 'seats'}</p>}
+        </div>
+
+        <div className="included-list">
+          {included.map(item => <div key={item}><Check />{item}</div>)}
+        </div>
+
+        {isCustom ? (
+          <a className="price-cta" href="https://wa.me/2349000000000?text=I'd%20like%20to%20talk%20about%20Enterprise%20pricing"
+            target="_blank" rel="noopener noreferrer">
+            <WA size={15} color={T.ink} /> Talk to us
+          </a>
+        ) : (
+          <Link href="/auth/signup" className="price-cta">Start free — 30 days <Arrow dark /></Link>
+        )}
+        <span className="price-footnote">No credit card required</span>
+      </div>
+    </div>
+  )
+}
+
+function Pricing() {
+  const { ref, visible } = useReveal(0.05)
+  return (
+    <section id="pricing" className="section cream-section pricing-section">
+      <div className="section-shell">
+        <Eyebrow>Pricing</Eyebrow>
+        <div className="section-heading">
+          <h2>Pay for people,<br /><em>not a plan size.</em></h2>
+          <p>First 30 days free. Cancel any time. All prices in Nigerian Naira.</p>
+        </div>
+        <div ref={ref} className={`reveal ${visible ? 'visible' : ''}`}>
+          <PricingCalculator />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Testimonials() {
+  const [active, setActive] = useState(0)
+  const testimonials = [
+    ['“', 'I used to spend two hours on internal emails every morning. Haelo handles most of it before I sit down.', 'Adaeze O.', 'CEO · Retail Group'],
+    ['“', 'The first reply Haelo sent for me was the fastest I had ever answered — and it was the right call.', 'Kunle A.', 'MD · Construction'],
+    ['“', 'Five senior managers on it now. Response time went from days to minutes.', 'Temi B.', 'COO · Financial Services'],
+  ]
+
+  return (
+    <section className="testimonials">
+      <div className="testimonial-noise" />
+      <div className="section-shell">
+        <div className="testimonial-head">
+          <Eyebrow light>What execs say</Eyebrow>
+          <div className="testimonial-controls">
+            {testimonials.map((_, i) => (
+              <button key={i} className={active === i ? 'active' : ''} onClick={() => setActive(i)}
+                aria-label={`Show testimonial ${i + 1}`} />
+            ))}
+          </div>
+        </div>
+
+        <div className="testimonial-stage">
+          <span className="quote-mark">{testimonials[active][0]}</span>
+          <blockquote key={active}>{testimonials[active][1]}</blockquote>
+          <div className="quote-author">
+            <span>{testimonials[active][2][0]}</span>
+            <div><strong>{testimonials[active][2]}</strong><small>{testimonials[active][3]}</small></div>
+          </div>
+        </div>
+
+        <p className="illustrative">Illustrative — swap in real client quotes as they come in.</p>
+      </div>
+    </section>
+  )
+}
+
+function FinalCTA() {
+  return (
+    <section className="final-cta">
+      <div className="cta-ring ring-a" />
+      <div className="cta-ring ring-b" />
+      <div className="cta-inner">
+        <Eyebrow>Ready when you are</Eyebrow>
+        <h2>Your team deserves<br /><em>a reply today.</em></h2>
+        <p>First 30 days free. No credit card. Set up in under 15 minutes.</p>
+        <div className="hero-actions centered">
+          <MagneticButton href="/auth/signup">Create your account</MagneticButton>
+          <a className="outline-btn" href="https://wa.me/2349000000000"
+            target="_blank" rel="noopener noreferrer">
+            <WA size={16} color={T.green} /> Start on WhatsApp
           </a>
         </div>
       </div>
@@ -928,93 +602,428 @@ function FinalCTA() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   FOOTER
-───────────────────────────────────────────── */
 function Footer() {
-  const { isMobile, isTablet } = useBreakpoint()
+  const columns = [
+    ['Product', ['How it works', 'Features', 'Pricing']],
+    ['Company', ['About', 'Blog', 'Careers', 'Contact']],
+    ['Legal', ['Privacy', 'Terms', 'Security']],
+  ]
+
   return (
-    <footer style={{ background: T.navy2, borderTop: `1px solid ${T.border}`, padding: isMobile ? '48px 5% 32px' : '56px 6% 40px' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? '1fr 1fr 1fr' : '1.6fr 1fr 1fr 1fr',
-          gap: isMobile ? '40px 24px' : 48,
-          marginBottom: isMobile ? 40 : 52,
-        }}>
-          {/* Brand — full width on mobile */}
-          <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 16 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: T.lime, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg viewBox="0 0 20 20" fill="none" width={14} height={14}><path d="M10 1C5.03 1 1 5.03 1 10c0 1.54.41 2.97 1.14 4.22L1 19l4.87-1.12A9.02 9.02 0 0010 19c4.97 0 9-4.03 9-9s-4.03-9-9-9z" fill={T.navy}/></svg>
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Haelo</span>
-            </div>
-            <p style={{ fontSize: 14, color: T.gray, lineHeight: 1.65, maxWidth: 240 }}>
-              Be everywhere. Miss nothing. AI Chief of Staff for Nigerian executives.
-            </p>
+    <footer>
+      <div className="footer-shell">
+        <div className="footer-main">
+          <div className="footer-brand">
+            <Link href="/" className="logo light">haelo<span>.</span></Link>
+            <p>Be everywhere. Miss nothing.<br />AI Chief of Staff for Nigerian executives.</p>
           </div>
-          {[
-            { h: 'Product', l: ['How it works', 'Features', 'Pricing', 'Integrations'] },
-            { h: 'Company', l: ['About', 'Blog', 'Careers', 'Contact'] },
-            { h: 'Legal', l: ['Privacy', 'Terms', 'Security'] },
-          ].map((col) => (
-            <div key={col.h}>
-              <h4 style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 18 }}>{col.h}</h4>
-              {col.l.map((l) => (
-                <a key={l} href="#" style={{ display: 'block', fontSize: 14, color: T.gray, textDecoration: 'none', marginBottom: 10 }}>{l}</a>
-              ))}
+          {columns.map(([heading, links]) => (
+            <div className="footer-column" key={heading}>
+              <small>{heading}</small>
+              {links.map(link => <a href="#" key={link}>{link}</a>)}
             </div>
           ))}
         </div>
-        <div style={{
-          borderTop: `1px solid ${T.border}`, paddingTop: 28,
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center',
-          gap: 8,
-        }}>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>© 2025 Haelo. All rights reserved.</p>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Built in Lagos 🇳🇬</p>
+        <div className="footer-bottom">
+          <span>© 2026 Haelo. All rights reserved.</span>
+          <span>Built in Lagos 🇳🇬</span>
         </div>
       </div>
     </footer>
   )
 }
 
-/* ─────────────────────────────────────────────
-   PAGE
-───────────────────────────────────────────── */
 export default function HomePage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(32px); }
-          to   { opacity: 1; transform: translateY(0); }
+        :root {
+          --ink: ${T.ink};
+          --cream: ${T.cream};
+          --gold: ${T.gold};
+          --green: ${T.green};
         }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.4; }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+          margin: 0;
+          background: var(--cream);
+          color: var(--ink);
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          -webkit-font-smoothing: antialiased;
+          overflow-x: hidden;
         }
-        @keyframes typingdot {
-          0%, 80%, 100% { transform: translateY(0); }
-          40%           { transform: translateY(-5px); }
+        a, button, input { font: inherit; }
+        a { color: inherit; }
+        button { cursor: pointer; }
+        ::selection { background: var(--gold); color: var(--ink); }
+
+        .nav {
+          position: fixed; inset: 0 0 auto; height: 78px; z-index: 1000;
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0 5.5%;
+          transition: .45s cubic-bezier(.2,.8,.2,1);
         }
-        @keyframes ticker {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-33.333%); }
+        .nav-scrolled {
+          height: 68px; background: rgba(246,243,236,.82);
+          backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+          border-bottom: 1px solid rgba(16,34,13,.08);
+          box-shadow: 0 12px 40px rgba(16,34,13,.04);
+        }
+        .logo { text-decoration: none; font-size: 22px; font-weight: 800; letter-spacing: -.055em; }
+        .logo span { color: var(--gold); }
+        .logo.light { color: var(--cream); }
+        .nav-links { display: flex; gap: 38px; margin-left: 10%; }
+        .nav-links a {
+          font-size: 13px; font-weight: 600; color: rgba(16,34,13,.55);
+          text-decoration: none; position: relative; padding: 10px 0;
+        }
+        .nav-links a::after {
+          content: ''; position: absolute; left: 0; right: 100%; bottom: 2px; height: 1px;
+          background: var(--gold); transition: right .3s ease;
+        }
+        .nav-links a:hover { color: var(--ink); }
+        .nav-links a:hover::after { right: 0; }
+        .nav-actions { display: flex; align-items: center; gap: 16px; }
+        .nav-cta {
+          display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+          background: var(--ink); color: var(--cream); border-radius: 9px; padding: 11px 17px;
+          font-size: 12.5px; font-weight: 700; transition: transform .25s, box-shadow .25s;
+        }
+        .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(16,34,13,.15); }
+        .menu-button { display: none; border: 0; background: none; padding: 8px; }
+        .menu-button i { display:block; width: 22px; height: 2px; background: var(--ink); margin: 5px 0; transition: .3s; }
+        .menu-button.is-open i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .menu-button.is-open i:nth-child(2) { opacity: 0; }
+        .menu-button.is-open i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        .mobile-menu {
+          position: fixed; z-index: 999; top: 68px; left: 0; right: 0;
+          padding: 8px 5% 28px; background: rgba(246,243,236,.97);
+          backdrop-filter: blur(20px); border-bottom: 1px solid var(--line);
+          transform: translateY(-120%); opacity: 0; transition: .45s cubic-bezier(.2,.8,.2,1);
+        }
+        .mobile-menu.open { transform: translateY(0); opacity: 1; }
+        .mobile-menu a { display:flex; justify-content:space-between; align-items:center; padding: 17px 0; border-bottom:1px solid var(--line); text-decoration:none; font-weight:700; font-size:15px; }
+        .mobile-menu .mobile-cta { margin-top: 16px; justify-content:center; background:var(--ink); color:var(--cream); border:0; border-radius:9px; }
+
+        .hero {
+          min-height: 880px; position: relative; overflow: hidden; background: var(--cream);
+          display: flex; align-items: center; padding: 145px 5.5% 100px;
+        }
+        .hero-grid {
+          position:absolute; inset:0; opacity:.34;
+          background-image: linear-gradient(rgba(16,34,13,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(16,34,13,.045) 1px, transparent 1px);
+          background-size: 72px 72px;
+          mask-image: linear-gradient(to bottom, black 0%, transparent 78%);
+        }
+        .hero-glow { position:absolute; border-radius:50%; filter:blur(2px); pointer-events:none; }
+        .hero-glow-one { width:500px; height:500px; right:2%; top:5%; background:radial-gradient(circle, rgba(185,149,53,.14), transparent 68%); animation: breathe 7s ease-in-out infinite; }
+        .hero-glow-two { width:420px; height:420px; left:-15%; bottom:-20%; background:radial-gradient(circle, rgba(46,125,82,.08), transparent 68%); animation: breathe 9s ease-in-out infinite reverse; }
+        .hero-inner { width:min(1220px,100%); margin:auto; display:grid; grid-template-columns: .92fr 1.08fr; gap:7%; align-items:center; position:relative; z-index:2; }
+        .hero-copy { animation: heroIn .9s cubic-bezier(.2,.8,.2,1) both; }
+        .hero-kicker { display:flex; align-items:center; gap:10px; font-size:10px; letter-spacing:.19em; font-weight:800; color:var(--gold); margin-bottom:23px; }
+        .live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 5px rgba(46,125,82,.1); animation: pulse 2s infinite; }
+        .hero h1 { font-size:clamp(4rem,6.8vw,6.6rem); line-height:.94; letter-spacing:-.075em; margin:0 0 30px; font-weight:800; }
+        .hero h1 span { color:transparent; -webkit-text-stroke:1.4px var(--ink); }
+        .hero-copy > p { max-width:570px; font-size:17px; line-height:1.75; color:rgba(16,34,13,.59); margin:0 0 35px; }
+        .hero-actions { display:flex; flex-wrap:wrap; gap:11px; align-items:center; }
+        .magnetic-btn, .outline-btn {
+          display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:50px; padding:0 21px;
+          border-radius:10px; text-decoration:none; font-size:13px; font-weight:700; transition:.3s cubic-bezier(.2,.8,.2,1);
+        }
+        .magnetic-btn { background:var(--ink); color:var(--cream); box-shadow:0 10px 28px rgba(16,34,13,.13); }
+        .magnetic-btn:hover { transform:translateY(-3px); box-shadow:0 17px 34px rgba(16,34,13,.19); }
+        .outline-btn { border:1px solid rgba(16,34,13,.16); color:var(--ink); }
+        .outline-btn:hover { background:white; transform:translateY(-3px); box-shadow:0 10px 25px rgba(16,34,13,.07); }
+        .trust-row { display:flex; flex-wrap:wrap; gap:18px; margin-top:25px; color:rgba(16,34,13,.42); font-size:10.5px; font-weight:600; }
+        .trust-row span { display:flex; align-items:center; gap:6px; }
+        .check { width:19px; height:19px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(185,149,53,.1); flex-shrink:0; }
+
+        .hero-product { min-height:590px; position:relative; display:flex; align-items:center; justify-content:center; animation: productIn 1.05s .12s cubic-bezier(.2,.8,.2,1) both; }
+        .product-orbit { position:absolute; border:1px solid rgba(185,149,53,.2); border-radius:50%; }
+        .orbit-one { width:570px; height:570px; animation: spin 28s linear infinite; }
+        .orbit-two { width:650px; height:330px; transform:rotate(-28deg); border-color:rgba(16,34,13,.08); animation: spinReverse 22s linear infinite; }
+        .whatsapp-card {
+          position:relative; width:min(405px,90%); min-height:505px; border-radius:27px; overflow:hidden;
+          background:#f9f8f3; border:1px solid rgba(16,34,13,.12);
+          box-shadow:0 45px 90px rgba(16,34,13,.19), 0 8px 20px rgba(16,34,13,.06);
+          transform:rotate(2deg); transition:transform .5s ease;
+        }
+        .whatsapp-card:hover { transform:rotate(0) translateY(-8px); }
+        .wa-top { height:75px; padding:0 20px; display:flex; align-items:center; gap:11px; background:var(--ink); color:var(--cream); }
+        .wa-avatar { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; background:var(--gold); color:var(--ink); font-weight:800; }
+        .wa-top strong { display:block; font-size:13px; }
+        .wa-top small { display:block; font-size:9px; opacity:.45; margin-top:3px; }
+        .wa-menu { margin-left:auto; letter-spacing:2px; opacity:.5; }
+        .wa-body { padding:22px 18px 16px; min-height:375px; background:linear-gradient(135deg,#f4f1e8,#fbfaf6); }
+        .date-pill { width:max-content; margin:0 auto 18px; padding:5px 10px; border-radius:30px; background:rgba(16,34,13,.07); color:rgba(16,34,13,.4); font-size:8px; font-weight:800; letter-spacing:.13em; }
+        .message-bubble, .draft-bubble { max-width:90%; border-radius:15px 15px 15px 5px; padding:15px; box-shadow:0 8px 22px rgba(16,34,13,.05); animation:bubbleIn .6s ease both; }
+        .message-bubble { background:white; }
+        .message-bubble small, .draft-label { display:block; font-size:8px; letter-spacing:.11em; font-weight:800; color:var(--gold); margin-bottom:8px; }
+        .message-bubble strong { font-size:12px; display:block; margin-bottom:7px; }
+        .message-bubble p, .draft-bubble p { font-size:10.5px; line-height:1.6; color:rgba(16,34,13,.59); margin:0; }
+        .message-from { display:flex; justify-content:space-between; margin-top:12px; font-size:8px; color:rgba(16,34,13,.35); }
+        .draft-bubble { margin:13px 0 0 auto; background:#e8f1e5; border-radius:15px 15px 5px 15px; animation-delay:.08s; }
+        .draft-label { color:var(--green); display:flex; align-items:center; gap:5px; }
+        .draft-label span { width:5px; height:5px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+        .bubble-actions { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:6px; margin-top:14px; }
+        .bubble-actions button { border:0; border-radius:7px; padding:8px 4px; font-size:8.5px; font-weight:800; background:var(--ink); color:var(--cream); }
+        .bubble-actions button:nth-child(2), .bubble-actions button:nth-child(3) { background:rgba(16,34,13,.08); color:var(--ink); }
+        .wa-bottom { height:54px; padding:0 17px; display:flex; align-items:center; gap:9px; font-size:8.5px; color:rgba(16,34,13,.36); border-top:1px solid rgba(16,34,13,.08); }
+        .wa-bottom i { width:6px; height:6px; border-radius:50%; background:var(--gold); animation:pulse 2s infinite; }
+        .float-card { position:absolute; display:flex; gap:9px; align-items:center; padding:11px 13px; border-radius:12px; background:rgba(255,255,255,.86); backdrop-filter:blur(15px); box-shadow:0 18px 45px rgba(16,34,13,.12); border:1px solid rgba(16,34,13,.08); animation:float 5s ease-in-out infinite; }
+        .float-card b { display:block; font-size:9px; }
+        .float-card small { display:block; font-size:7.5px; color:rgba(16,34,13,.4); margin-top:3px; }
+        .float-card-one { left:0; top:17%; }
+        .float-card-two { right:0; bottom:15%; animation-delay:-2s; }
+        .float-icon, .pulse-check { width:25px; height:25px; display:grid; place-items:center; border-radius:8px; background:rgba(185,149,53,.12); color:var(--gold); font-size:11px; }
+        .pulse-check { background:rgba(46,125,82,.1); color:var(--green); }
+        .scroll-cue { position:absolute; bottom:30px; left:5.5%; display:flex; align-items:center; gap:12px; font-size:8px; font-weight:800; letter-spacing:.18em; color:rgba(16,34,13,.3); }
+        .scroll-cue i { display:block; width:42px; height:1px; background:rgba(16,34,13,.18); position:relative; overflow:hidden; }
+        .scroll-cue i::after { content:''; position:absolute; left:0; width:13px; height:100%; background:var(--gold); animation:scrollLine 2s infinite; }
+
+        .ledger { background:var(--ink); color:var(--cream); position:relative; overflow:hidden; }
+        .ledger::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%, rgba(185,149,53,.12), transparent 48%); }
+        .ledger-inner { width:min(1220px,89%); margin:auto; display:grid; grid-template-columns:repeat(3,1fr); }
+        .ledger-item { position:relative; min-height:210px; padding:56px 45px; border-left:1px solid rgba(246,243,236,.1); }
+        .ledger-item:first-child { border-left:0; }
+        .ledger-index { position:absolute; top:30px; right:35px; font-size:8px; letter-spacing:.15em; color:rgba(246,243,236,.25); }
+        .ledger-item strong { display:block; font-size:clamp(2.8rem,4vw,4rem); color:var(--gold); letter-spacing:-.06em; line-height:1; margin-bottom:12px; }
+        .ledger-item p { max-width:260px; margin:0; font-size:12px; line-height:1.7; color:rgba(246,243,236,.48); }
+
+        .section { padding:125px 5.5%; }
+        .section-shell { width:min(1220px,100%); margin:auto; }
+        .cream-section { background:var(--cream); }
+        .eyebrow { display:flex; align-items:center; gap:10px; color:var(--gold); font-size:9.5px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; margin-bottom:23px; }
+        .eyebrow > span { width:25px; height:1px; background:var(--gold); }
+        .eyebrow-light { color:var(--gold); }
+        .section-heading { margin-bottom:62px; }
+        .section-heading h2, .feature-intro h2, .integration-inner h2, .cta-inner h2 {
+          margin:0; font-size:clamp(2.7rem,4.5vw,4.6rem); line-height:1; letter-spacing:-.065em; font-weight:800;
+        }
+        em { font-style:normal; color:transparent; -webkit-text-stroke:1px currentColor; }
+        .section-heading p { max-width:470px; margin:25px 0 0; color:rgba(16,34,13,.52); font-size:14px; line-height:1.75; }
+        .split-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:40px; }
+        .split-heading p { margin:0; }
+
+        .steps-grid { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+        .step-card { min-height:320px; padding:27px 27px 25px 0; margin-right:27px; position:relative; border-right:1px solid var(--line); }
+        .step-card:last-child { border-right:0; }
+        .step-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:55px; }
+        .step-top > span { font-size:10px; color:var(--gold); font-weight:800; letter-spacing:.1em; }
+        .step-top i { width:7px; height:7px; border-radius:50%; border:1px solid var(--gold); transition:.3s; }
+        .step-card:hover .step-top i { background:var(--gold); box-shadow:0 0 0 5px rgba(185,149,53,.1); }
+        .step-card h3 { font-size:16px; margin:0 0 12px; letter-spacing:-.025em; }
+        .step-card p { max-width:220px; font-size:12px; line-height:1.75; color:rgba(16,34,13,.52); margin:0; }
+        .step-line { position:absolute; bottom:25px; left:0; width:0; height:1px; background:var(--gold); transition:width .5s; }
+        .step-card:hover .step-line { width:70%; }
+        .step-arrow { position:absolute; bottom:16px; right:27px; opacity:.2; transition:.3s; }
+        .step-card:hover .step-arrow { opacity:1; transform:translate(3px,-3px); }
+
+        .flow-strip { margin-top:70px; display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:18px; overflow:hidden; box-shadow:0 22px 55px rgba(16,34,13,.05); }
+        .flow-step { min-height:150px; padding:24px; display:flex; gap:18px; position:relative; background:rgba(255,255,255,.42); border-right:1px solid var(--line); }
+        .flow-step:last-child { border-right:0; }
+        .flow-number { color:var(--gold); font-size:10px; font-weight:800; }
+        .flow-step small { display:block; font-size:10px; color:rgba(16,34,13,.38); text-transform:uppercase; letter-spacing:.1em; margin-bottom:5px; }
+        .flow-step strong { display:block; font-size:13px; }
+        .flow-step p { margin:8px 0 0; color:rgba(16,34,13,.55); font-size:11px; line-height:1.5; }
+        .flow-arrow { position:absolute; right:-11px; top:50%; width:22px; height:22px; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; background:var(--cream); z-index:2; }
+
+        .feature-section { background:#EEEAE1; }
+        .feature-section .section-shell { display:grid; grid-template-columns:.8fr 1.2fr; gap:100px; }
+        .feature-intro { position:relative; }
+        .feature-intro p { max-width:320px; color:rgba(16,34,13,.53); font-size:13px; line-height:1.75; margin-top:25px; }
+        .feature-stamp { display:inline-block; margin-top:85px; border:1px solid rgba(16,34,13,.13); padding:15px 17px; font-size:8px; letter-spacing:.15em; color:rgba(16,34,13,.32); line-height:1.6; transform:rotate(-3deg); }
+        .feature-stamp b { color:var(--ink); }
+        .feature-list { border-top:1px solid rgba(16,34,13,.13); }
+        .feature-row { display:grid; grid-template-columns:45px 1fr 30px; gap:15px; align-items:start; padding:24px 0; border-bottom:1px solid rgba(16,34,13,.13); transition:.35s; }
+        .feature-row:hover { padding-left:12px; background:rgba(255,255,255,.35); }
+        .feature-number { font-size:9px; color:rgba(16,34,13,.3); padding-top:4px; }
+        .feature-copy h3 { font-size:14px; margin:0 0 6px; }
+        .feature-copy p { margin:0; font-size:11.5px; line-height:1.65; color:rgba(16,34,13,.48); }
+        .feature-plus { font-size:18px; color:rgba(16,34,13,.22); font-weight:400; transition:.3s; }
+        .feature-row:hover .feature-plus { color:var(--gold); transform:rotate(45deg); }
+
+        .integrations { min-height:650px; padding:125px 5.5%; position:relative; overflow:hidden; background:var(--ink); color:var(--cream); }
+        .integration-glow { position:absolute; width:700px; height:700px; border-radius:50%; top:-300px; right:-150px; background:radial-gradient(circle, rgba(185,149,53,.14), transparent 67%); animation:breathe 8s infinite; }
+        .integration-inner { width:min(1220px,100%); margin:auto; position:relative; }
+        .integration-inner h2 { max-width:650px; margin-bottom:70px; }
+        .integration-inner h2 span { color:var(--gold); }
+        .integration-list { border-top:1px solid rgba(246,243,236,.12); display:grid; grid-template-columns:repeat(5,1fr); }
+        .integration-item { min-height:150px; padding:25px 18px; border-right:1px solid rgba(246,243,236,.12); position:relative; transition:.35s; }
+        .integration-item:first-child { border-left:1px solid rgba(246,243,236,.12); }
+        .integration-item:hover { background:rgba(246,243,236,.035); transform:translateY(-6px); }
+        .integration-item span { display:block; font-size:8px; color:rgba(246,243,236,.25); margin-bottom:55px; }
+        .integration-item strong { font-size:13px; }
+        .integration-note { font-size:10px; color:rgba(246,243,236,.3); margin-top:25px; }
+
+        .pricing-section { padding-bottom:145px; }
+        .pricing-card { display:grid; grid-template-columns:1.1fr .9fr; background:white; border:1px solid var(--line); border-radius:22px; overflow:hidden; box-shadow:0 30px 75px rgba(16,34,13,.07); }
+        .calculator { padding:45px; }
+        .calculator-head { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+        .calculator-head small, .price-summary > div > small { color:rgba(16,34,13,.35); font-size:8.5px; font-weight:800; letter-spacing:.15em; }
+        .calculator-head h3 { margin:8px 0 0; font-size:21px; letter-spacing:-.035em; }
+        .live-price { border:1px solid rgba(46,125,82,.2); color:var(--green); border-radius:30px; padding:6px 9px; font-size:7px; font-weight:800; letter-spacing:.12em; }
+        .calculator-copy { max-width:420px; font-size:12px; line-height:1.7; color:rgba(16,34,13,.5); margin:17px 0 36px; }
+        .seat-control { border-top:1px solid var(--line); padding-top:25px; }
+        .seat-label { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:20px; }
+        .seat-label span { font-size:12px; color:rgba(16,34,13,.5); }
+        .seat-label strong { font-size:25px; letter-spacing:-.05em; }
+        input[type=range] { appearance:none; width:100%; height:4px; border-radius:10px; outline:0; background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--range, 18%),rgba(16,34,13,.1) var(--range, 18%),rgba(16,34,13,.1) 100%); }
+        input[type=range]::-webkit-slider-thumb { appearance:none; width:20px; height:20px; border-radius:50%; background:var(--gold); border:4px solid white; box-shadow:0 2px 8px rgba(16,34,13,.2); }
+        input[type=range]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:var(--gold); border:4px solid white; box-shadow:0 2px 8px rgba(16,34,13,.2); }
+        .range-labels { display:flex; justify-content:space-between; margin-top:10px; font-size:8px; color:rgba(16,34,13,.3); }
+        .breakdown { margin-top:28px; padding:15px 18px; background:var(--cream); border-radius:12px; }
+        .breakdown-row { display:flex; justify-content:space-between; gap:15px; padding:6px 0; font-size:11px; }
+        .breakdown-row span { color:rgba(16,34,13,.58); }
+        .breakdown-row small { color:rgba(16,34,13,.3); margin-left:7px; }
+        .breakdown-row strong { font-size:11px; }
+        .rate-note { margin-top:9px; padding-top:10px; border-top:1px solid var(--line); font-size:9px; color:var(--gold); line-height:1.5; }
+        .custom-box { margin-top:28px; display:flex; gap:13px; padding:18px; background:var(--cream); border-radius:12px; }
+        .custom-box > span { color:var(--gold); font-weight:800; font-size:11px; }
+        .custom-box strong { font-size:12px; }
+        .custom-box p { font-size:10px; line-height:1.5; color:rgba(16,34,13,.5); margin:4px 0 0; }
+        .price-summary { padding:45px 40px; background:var(--ink); color:var(--cream); display:flex; flex-direction:column; justify-content:space-between; min-height:480px; }
+        .price-total { margin-top:10px; color:var(--gold); font-size:clamp(2.6rem,4vw,4rem); font-weight:800; letter-spacing:-.065em; }
+        .price-summary > div > p { font-size:10px; color:rgba(246,243,236,.32); margin:4px 0 0; }
+        .included-list { margin:35px 0; display:grid; gap:10px; }
+        .included-list div { display:flex; align-items:center; gap:8px; font-size:10.5px; color:rgba(246,243,236,.62); }
+        .price-summary .check { background:rgba(246,243,236,.08); }
+        .price-cta { width:100%; min-height:50px; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--gold); color:var(--ink); border-radius:9px; text-decoration:none; font-size:12px; font-weight:800; transition:.3s; }
+        .price-cta:hover { transform:translateY(-3px); box-shadow:0 13px 28px rgba(0,0,0,.22); }
+        .price-footnote { text-align:center; color:rgba(246,243,236,.22); font-size:8.5px; margin-top:11px; }
+
+        .testimonials { background:var(--ink); color:var(--cream); padding:125px 5.5%; position:relative; overflow:hidden; }
+        .testimonial-noise { position:absolute; inset:0; opacity:.18; background-image:radial-gradient(rgba(246,243,236,.5) .5px, transparent .5px); background-size:6px 6px; mask-image:linear-gradient(to bottom, transparent, black, transparent); }
+        .testimonial-head { display:flex; justify-content:space-between; align-items:flex-end; }
+        .testimonial-controls { display:flex; gap:7px; }
+        .testimonial-controls button { width:32px; height:5px; border:0; border-radius:10px; background:rgba(246,243,236,.16); padding:0; transition:.3s; }
+        .testimonial-controls button.active { background:var(--gold); width:50px; }
+        .testimonial-stage { max-width:920px; margin:65px auto 0; text-align:center; }
+        .quote-mark { color:var(--gold); font-family:Georgia,serif; font-size:75px; line-height:.5; display:block; }
+        blockquote { font-size:clamp(1.8rem,3.5vw,3.4rem); line-height:1.2; letter-spacing:-.05em; margin:25px 0 45px; font-weight:600; animation:quoteIn .5s ease both; }
+        .quote-author { display:flex; justify-content:center; align-items:center; gap:12px; }
+        .quote-author > span { width:38px; height:38px; display:grid; place-items:center; background:var(--gold); color:var(--ink); border-radius:50%; font-weight:800; }
+        .quote-author div { text-align:left; }
+        .quote-author strong, .quote-author small { display:block; }
+        .quote-author strong { font-size:11px; }
+        .quote-author small { margin-top:3px; color:rgba(246,243,236,.35); font-size:9px; }
+        .illustrative { text-align:center; color:rgba(246,243,236,.2); font-size:8.5px; margin-top:65px; }
+
+        .final-cta { min-height:650px; display:grid; place-items:center; text-align:center; padding:110px 5.5%; position:relative; overflow:hidden; background:var(--cream); }
+        .cta-inner { position:relative; z-index:2; }
+        .cta-inner .eyebrow { justify-content:center; }
+        .cta-inner h2 { font-size:clamp(3rem,6vw,5.8rem); margin-bottom:25px; }
+        .cta-inner p { color:rgba(16,34,13,.5); font-size:14px; margin-bottom:32px; }
+        .centered { justify-content:center; }
+        .cta-ring { position:absolute; border:1px solid rgba(16,34,13,.08); border-radius:50%; pointer-events:none; }
+        .ring-a { width:650px; height:650px; animation:spin 35s linear infinite; }
+        .ring-b { width:430px; height:430px; border-color:rgba(185,149,53,.18); animation:spinReverse 27s linear infinite; }
+
+        footer { background:var(--ink); color:var(--cream); padding:70px 5.5% 35px; }
+        .footer-shell { width:min(1220px,100%); margin:auto; }
+        .footer-main { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:60px; padding-bottom:65px; }
+        .footer-brand p { color:rgba(246,243,236,.35); font-size:11px; line-height:1.7; margin-top:15px; }
+        .footer-column small { display:block; text-transform:uppercase; letter-spacing:.15em; font-size:8px; color:rgba(246,243,236,.22); font-weight:800; margin-bottom:17px; }
+        .footer-column a { display:block; width:max-content; color:rgba(246,243,236,.5); text-decoration:none; font-size:11px; margin-bottom:11px; transition:.2s; }
+        .footer-column a:hover { color:var(--cream); transform:translateX(3px); }
+        .footer-bottom { border-top:1px solid rgba(246,243,236,.1); padding-top:22px; display:flex; justify-content:space-between; gap:20px; color:rgba(246,243,236,.22); font-size:9px; }
+
+        .reveal { opacity:0; transform:translateY(30px); transition:opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); }
+        .reveal.visible { opacity:1; transform:none; }
+        .reveal.visible .step-card:nth-child(1), .reveal.visible .feature-row:nth-child(1) { transition-delay:.04s; }
+        .reveal.visible .step-card:nth-child(2), .reveal.visible .feature-row:nth-child(2) { transition-delay:.10s; }
+        .reveal.visible .step-card:nth-child(3), .reveal.visible .feature-row:nth-child(3) { transition-delay:.16s; }
+        .reveal.visible .step-card:nth-child(4), .reveal.visible .feature-row:nth-child(4) { transition-delay:.22s; }
+
+        @keyframes heroIn { from { opacity:0; transform:translateY(35px); } to { opacity:1; transform:none; } }
+        @keyframes productIn { from { opacity:0; transform:translateX(40px) scale(.96); } to { opacity:1; transform:none; } }
+        @keyframes breathe { 0%,100% { transform:scale(1); opacity:.8; } 50% { transform:scale(1.08); opacity:1; } }
+        @keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(46,125,82,.15); } 50% { box-shadow:0 0 0 6px rgba(46,125,82,0); } }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        @keyframes spinReverse { to { transform:rotate(-360deg); } }
+        @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
+        @keyframes bubbleIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        @keyframes scrollLine { 0% { transform:translateX(-15px); } 50%,100% { transform:translateX(45px); } }
+        @keyframes quoteIn { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:none; } }
+
+        @media (max-width: 1050px) {
+          .hero-inner { grid-template-columns:1fr; max-width:760px; }
+          .hero { padding-top:125px; }
+          .hero-product { margin-top:20px; min-height:550px; }
+          .hero-copy { text-align:center; }
+          .hero-copy > p { margin-left:auto; margin-right:auto; }
+          .hero-kicker, .hero-actions, .trust-row { justify-content:center; }
+          .feature-section .section-shell { grid-template-columns:1fr; gap:55px; }
+          .feature-stamp { margin-top:35px; }
+          .steps-grid { grid-template-columns:1fr 1fr; }
+          .step-card:nth-child(2) { border-right:0; }
+          .step-card:nth-child(3), .step-card:nth-child(4) { border-top:1px solid var(--line); }
+          .integration-list { grid-template-columns:repeat(3,1fr); }
+          .integration-item:nth-child(4), .integration-item:nth-child(5) { border-top:1px solid rgba(246,243,236,.12); }
+        }
+
+        @media (max-width: 700px) {
+          .nav { height:68px; padding:0 5%; }
+          .nav-scrolled { height:62px; }
+          .nav-links, .nav-cta { display:none; }
+          .menu-button { display:block; }
+          .mobile-menu { top:62px; }
+          .hero { min-height:auto; padding:120px 5% 75px; }
+          .hero h1 { font-size:clamp(3.25rem,14vw,5rem); }
+          .hero-copy > p { font-size:14px; }
+          .hero-product { min-height:490px; margin-top:15px; }
+          .orbit-one { width:410px; height:410px; }
+          .orbit-two { width:450px; height:260px; }
+          .whatsapp-card { width:330px; min-height:440px; }
+          .wa-body { min-height:310px; }
+          .float-card { transform:scale(.8); }
+          .float-card-one { left:-14px; }
+          .float-card-two { right:-14px; }
+          .scroll-cue { display:none; }
+          .ledger-inner { width:90%; grid-template-columns:1fr; }
+          .ledger-item { min-height:auto; padding:38px 0; border-left:0; border-bottom:1px solid rgba(246,243,236,.1); }
+          .ledger-item:last-child { border-bottom:0; }
+          .ledger-index { top:30px; right:0; }
+          .section, .integrations, .testimonials { padding:82px 5%; }
+          .split-heading { display:block; }
+          .split-heading p { margin-top:20px; }
+          .steps-grid { grid-template-columns:1fr; }
+          .step-card, .step-card:nth-child(2) { border-right:0; border-bottom:1px solid var(--line); min-height:250px; }
+          .step-card:last-child { border-bottom:0; }
+          .flow-strip { grid-template-columns:1fr; }
+          .flow-step { border-right:0; border-bottom:1px solid var(--line); min-height:130px; }
+          .flow-step:last-child { border-bottom:0; }
+          .flow-arrow { right:20px; top:auto; bottom:-11px; transform:rotate(90deg); }
+          .feature-section .section-shell { gap:40px; }
+          .feature-row { grid-template-columns:32px 1fr 20px; }
+          .integration-list { grid-template-columns:1fr 1fr; }
+          .integration-item:nth-child(3) { border-top:1px solid rgba(246,243,236,.12); }
+          .integration-item:nth-child(4), .integration-item:nth-child(5) { border-top:1px solid rgba(246,243,236,.12); }
+          .pricing-card { grid-template-columns:1fr; }
+          .calculator, .price-summary { padding:32px 24px; }
+          .price-summary { min-height:auto; }
+          .testimonial-head { align-items:center; }
+          .testimonial-stage { margin-top:48px; }
+          .footer-main { grid-template-columns:1fr 1fr; gap:38px 25px; }
+          .footer-brand { grid-column:1 / -1; }
+          .footer-bottom { flex-direction:column; }
+          .final-cta { min-height:580px; padding:80px 5%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
         }
       `}</style>
+
       <Navbar />
       <main>
         <Hero />
-        <Stats />
+        <Ledger />
         <HowItWorks />
         <Features />
         <Integrations />

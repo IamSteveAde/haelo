@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Save, CheckCircle, AlertCircle, Zap, Bell, Layers, Shield, Mail, Smartphone, Plus } from 'lucide-react'
+import { Save, CheckCircle, AlertCircle, Zap, Bell, Layers, Shield, Mail, Smartphone, Plus, Users, UserPlus, MoreVertical, X } from 'lucide-react'
 import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings } from '@/lib/api/onboard'
+import { getAccounts, inviteAccount, resendInvite, removeAccount, type OrgAccount, type AccountRole } from '@/lib/api/accounts'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK    = '#11270B'
@@ -196,6 +197,148 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 //   )
 // }
 
+// ── ACCOUNT INITIALS ──────────────────────────────────────────────────────────
+function accountInitials(name: string | null, email: string) {
+  if (name) return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  return email.slice(0, 2).toUpperCase()
+}
+
+// ── ROLE BADGE ─────────────────────────────────────────────────────────────────
+function RoleBadge({ role }: { role: AccountRole }) {
+  const label = role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : 'Member'
+  return (
+    <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: role === 'owner' ? GOLD_BG : INK_06, color: role === 'owner' ? GOLD : INK_60 }}>
+      {label}
+    </span>
+  )
+}
+
+// ── ACCOUNT ROW ────────────────────────────────────────────────────────────────
+function AccountRow({ account, onResend, onRemove, resending }: {
+  account: OrgAccount; onResend: () => void; onRemove: () => void; resending: boolean
+}) {
+  const [hov, setHov] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => { setHov(false); setMenuOpen(false) }}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, background: hov ? CREAM : 'transparent', transition: 'background .16s', position: 'relative' }}
+    >
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: account.status === 'invited' ? INK_10 : INK, color: account.status === 'invited' ? INK_40 : CREAM, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+        {accountInitials(account.name, account.email)}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {account.name || account.email}
+        </p>
+        <p style={{ fontSize: 11, color: INK_40 }}>{account.name ? account.email : 'Invited · not yet joined'}</p>
+      </div>
+      <RoleBadge role={account.role} />
+      <span style={{ fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: account.status === 'active' ? GREEN_BG : 'rgba(180,83,9,0.08)', color: account.status === 'active' ? GREEN : '#B45309', flexShrink: 0 }}>
+        {account.status === 'active' ? 'Active' : 'Invited'}
+      </span>
+
+      {account.role !== 'owner' && (
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button onClick={() => setMenuOpen(m => !m)} style={{ width: 26, height: 26, borderRadius: 7, border: 'none', background: menuOpen ? WHITE : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <MoreVertical size={14} color={INK_40} />
+          </button>
+          {menuOpen && (
+            <div className="fade-in" style={{ position: 'absolute', right: 0, top: 30, background: WHITE, border: `1px solid ${INK_10}`, borderRadius: 10, boxShadow: '0 8px 24px rgba(17,39,11,0.12)', zIndex: 10, minWidth: 160, overflow: 'hidden' }}>
+              {account.status === 'invited' && (
+                <button onClick={() => { onResend(); setMenuOpen(false) }} disabled={resending}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 12, fontWeight: 600, color: INK, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  {resending ? 'Resending…' : 'Resend invite'}
+                </button>
+              )}
+              <button onClick={() => { onRemove(); setMenuOpen(false) }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 12, fontWeight: 600, color: RED, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", borderTop: account.status === 'invited' ? `1px solid ${INK_06}` : 'none' }}>
+                {account.status === 'invited' ? 'Revoke invite' : 'Remove account'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── INVITE MODAL ───────────────────────────────────────────────────────────────
+function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (email: string, role: AccountRole) => Promise<void> }) {
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<AccountRole>('member')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+  const handleSubmit = async () => {
+    if (!isValidEmail) { setError('Enter a valid email address.'); return }
+    setError('')
+    setSending(true)
+    try {
+      await onInvite(email, role)
+      onClose()
+    } catch (err) {
+      setError('Failed to send invite. Try again.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+      <div className="fade-in" style={{ background: WHITE, borderRadius: 18, padding: 28, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(10,22,40,0.25)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <p style={{ fontSize: 16, fontWeight: 800, color: INK }}>Invite a team member</p>
+          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: CREAM, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <X size={14} color={INK_60} />
+          </button>
+        </div>
+
+        <p style={{ fontSize: 12, color: INK_60, lineHeight: 1.6, marginBottom: 20 }}>
+          They'll get an email invite to join your Haelo account. They set their own password and go through their own onboarding — same company, their own dashboard.
+        </p>
+
+        <div style={{ marginBottom: 16 }}>
+          <FieldLabel>Email address</FieldLabel>
+          <TextInput type="email" placeholder="name@company.com" value={email} onChange={setEmail} />
+        </div>
+
+        <div style={{ marginBottom: error ? 10 : 22 }}>
+          <FieldLabel>Role</FieldLabel>
+          <SelectInput value={role} onChange={v => setRole(v as AccountRole)}>
+            <option value="member">Member</option>
+            <option value="admin">Admin</option>
+          </SelectInput>
+        </div>
+
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16 }}>
+            <AlertCircle size={13} color={RED} />
+            <p style={{ fontSize: 11.5, color: RED, fontWeight: 600 }}>{error}</p>
+          </div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={sending || !email}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: INK, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontSize: 13, fontWeight: 700, padding: '13px', borderRadius: 11, border: 'none',
+            cursor: sending || !email ? 'not-allowed' : 'pointer', opacity: sending || !email ? 0.6 : 1,
+            transition: 'all .18s',
+          }}>
+          <UserPlus size={14} /> {sending ? 'Sending invite…' : 'Send invite'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── DANGER BUTTON ──────────────────────────────────────────────────────────────
 function DangerBtn({ label }: { label: string }) {
   const [hov, setHov] = useState(false)
@@ -230,6 +373,58 @@ export default function SettingsPage() {
     weeklyReport: false,
     errors: true,
   })
+
+  // Team Accounts — real org-level logins, separate from Staff Directory.
+  const [accounts, setAccounts] = useState<OrgAccount[]>([])
+  const [accountsLoading, setAccountsLoading] = useState(true)
+  const [accountsHov, setAccountsHov] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
+  const [resendingId, setResendingId] = useState<number | null>(null)
+  const [inviteToast, setInviteToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      setAccountsLoading(true)
+      try {
+        const res = await getAccounts()
+        if (res?.data?.accounts) setAccounts(res.data.accounts)
+      } catch (err) {
+        console.error('Failed to fetch org accounts:', err)
+      } finally {
+        setAccountsLoading(false)
+      }
+    }
+    fetchAccounts()
+  }, [])
+
+  const handleInvite = async (email: string, role: AccountRole) => {
+    await inviteAccount({ email, role })
+    setAccounts(prev => [...prev, { id: Date.now(), name: null, email, role, status: 'invited' }])
+    setInviteToast(`Invite sent to ${email}`)
+    setTimeout(() => setInviteToast(null), 3000)
+  }
+
+  const handleResend = async (id: number) => {
+    setResendingId(id)
+    try {
+      await resendInvite(id)
+      setInviteToast('Invite resent')
+      setTimeout(() => setInviteToast(null), 3000)
+    } catch (err) {
+      console.error('Failed to resend invite:', err)
+    } finally {
+      setResendingId(null)
+    }
+  }
+
+  const handleRemove = async (id: number) => {
+    try {
+      await removeAccount(id)
+      setAccounts(prev => prev.filter(a => a.id !== id))
+    } catch (err) {
+      console.error('Failed to remove account:', err)
+    }
+  }
 
   // Timer load effect
   useEffect(() => {
@@ -404,7 +599,55 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* INVITE TOAST */}
+        {inviteToast && (
+          <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 16px', background: GREEN_BG, border: '1.5px solid rgba(46,125,82,0.2)', borderRadius: 11, marginBottom: 20 }}>
+            <CheckCircle size={14} color={GREEN} />
+            <p style={{ fontSize: 12, fontWeight: 600, color: GREEN }}>{inviteToast}</p>
+          </div>
+        )}
+
+        {showInvite && <InviteModal onClose={() => setShowInvite(false)} onInvite={handleInvite} />}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 720 }}>
+
+          {/* ── 0. TEAM ACCOUNTS ── */}
+          <SectionCard hov={accountsHov} onEnter={() => setAccountsHov(true)} onLeave={() => setAccountsHov(false)}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 22, paddingBottom: 18, borderBottom: `1px solid ${INK_06}` }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 38, height: 38, background: INK_06, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Users size={17} color={INK_40} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: INK, letterSpacing: '-.015em', marginBottom: 2 }}>Team accounts</p>
+                  <p style={{ fontSize: 12, color: INK_60, lineHeight: 1.55 }}>Everyone with their own login under this company. Invite by email — they set their own password and onboard themselves.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInvite(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: INK, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 12, fontWeight: 700, padding: '9px 14px', borderRadius: 9, border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                <UserPlus size={13} /> Invite
+              </button>
+            </div>
+
+            {accountsLoading ? (
+              <p style={{ fontSize: 12, color: INK_40, padding: '8px 0' }}>Loading team accounts…</p>
+            ) : accounts.length === 0 ? (
+              <p style={{ fontSize: 12, color: INK_40, padding: '8px 0' }}>Just you so far — invite your team to bring them onto this company's Haelo account.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {accounts.map(a => (
+                  <AccountRow
+                    key={a.id}
+                    account={a}
+                    resending={resendingId === a.id}
+                    onResend={() => handleResend(a.id)}
+                    onRemove={() => handleRemove(a.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </SectionCard>
 
           {/* ── 1. TIMER ── */}
           <SectionCard hov={timerHov} onEnter={() => setTimerHov(true)} onLeave={() => setTimerHov(false)}>

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CheckCircle, Download, CreditCard, ArrowRight, AlertCircle, Zap, ExternalLink } from 'lucide-react'
+import { CheckCircle, Download, CreditCard, ArrowRight, AlertCircle, Zap, ExternalLink, Info, Users, UserPlus, ChevronRight } from 'lucide-react'
+import { getAccounts, type OrgAccount } from '@/lib/api/accounts'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK    = '#11270B'
@@ -45,7 +46,69 @@ body,html{font-family:'Plus Jakarta Sans',sans-serif;background:${CREAM};color:$
 }
 `
 
+// ── PRICING MODEL ──────────────────────────────────────────────────────────
+// Per-inbox, tiered rate — no hard seat cap. Seats are driven by the real
+// Team Accounts count (see BillingPage below), not an independent dial.
+// Beyond SELF_SERVE_MAX, direct to a custom Enterprise conversation instead
+// of self-serve checkout.
+const SELF_SERVE_MAX = 15
+
+type Tier = { from: number; to: number; rate: number; label: string }
+const TIERS: Tier[] = [
+  { from: 1, to: 1,  rate: 55000, label: 'Seat 1' },
+  { from: 2, to: 5,  rate: 45000, label: 'Seats 2–5' },
+  { from: 6, to: 15, rate: 35000, label: 'Seats 6–15' },
+]
+
+type Breakdown = { label: string; qty: number; rate: number; subtotal: number }
+
+function computeBilling(seats: number): { total: number; breakdown: Breakdown[]; isCustom: boolean } {
+  if (seats > SELF_SERVE_MAX) {
+    return { total: 0, breakdown: [], isCustom: true }
+  }
+  let remaining = seats
+  const breakdown: Breakdown[] = []
+  let total = 0
+  for (const tier of TIERS) {
+    if (remaining <= 0) break
+    const tierCapacity = tier.to - tier.from + 1
+    const qty = Math.min(remaining, tierCapacity)
+    if (qty > 0) {
+      const subtotal = qty * tier.rate
+      breakdown.push({ label: tier.label, qty, rate: tier.rate, subtotal })
+      total += subtotal
+      remaining -= qty
+    }
+  }
+  return { total, breakdown, isCustom: false }
+}
+
+function getPlanLabel(seats: number): string {
+  if (seats > SELF_SERVE_MAX) return 'Enterprise'
+  if (seats <= 1) return 'Solo'
+  return 'Team'
+}
+
+function formatNaira(n: number): string {
+  return `₦${n.toLocaleString('en-NG')}`
+}
+
+// Effective per-seat rate for the NEXT seat, to show a "adding one more drops
+// your rate to X" nudge near tier boundaries.
+function nextSeatRate(seats: number): number | null {
+  const next = seats + 1
+  if (next > SELF_SERVE_MAX) return null
+  const tier = TIERS.find(t => next >= t.from && next <= t.to)
+  return tier ? tier.rate : null
+}
+
 const WA_PATH = "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+
+function initials(name: string) {
+  return name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+}
+
+type BillingAccountPreview = { id: number; name: string | null; email: string; status: string }
 
 // ── SHARED CARD ───────────────────────────────────────────────────────────────
 function Card({ children, hov, onEnter, onLeave, style: extra }: {
@@ -115,15 +178,82 @@ function FeatureItem({ f }: { f: string }) {
   )
 }
 
+// ── MEMBER ROW (billing preview — compact, read-only) ─────────────────────────
+function MemberRow({ m }: { m: BillingAccountPreview }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 0' }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 9, background: INK, color: CREAM,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 11, fontWeight: 700, flexShrink: 0,
+      }}>
+        {m.name ? initials(m.name) : m.email.slice(0, 2).toUpperCase()}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 12.5, fontWeight: 700, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name || m.email}</p>
+        <p style={{ fontSize: 11, color: INK_40 }}>{m.name ? m.email : 'Invited · not yet joined'}</p>
+      </div>
+      <span style={{
+        fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 20, flexShrink: 0,
+        background: m.status === 'active' ? GREEN_BG : 'rgba(180,83,9,0.08)',
+        color: m.status === 'active' ? GREEN : '#B45309',
+      }}>
+        {m.status === 'active' ? 'Active' : 'Invited'}
+      </span>
+    </div>
+  )
+}
+
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function BillingPage() {
   const [featHov,    setFeatHov]    = useState(false)
   const [payHov,     setPayHov]     = useState(false)
   const [invoiceHov, setInvoiceHov] = useState(false)
-  const [upgradeHov, setUpgradeHov] = useState(false)
-  const [downHov,    setDownHov]    = useState(false)
+  const [enterpriseHov, setEnterpriseHov] = useState(false)
   const [cancelHov,  setCancelHov]  = useState(false)
   const [updateHov,  setUpdateHov]  = useState(false)
+  const [membersHov, setMembersHov] = useState(false)
+  const [addMemberHov, setAddMemberHov] = useState(false)
+
+  // Seats are driven by real Team Accounts (Settings → Team accounts) — you
+  // don't set a seat count independently, you invite or remove an actual
+  // account and the count (and the bill) follows. Adding people happens on
+  // the Settings page, which already has the full invite flow; this page
+  // just reflects the resulting headcount and links there so there's one
+  // source of truth instead of duplicating that logic here.
+  const [accountsPreview, setAccountsPreview] = useState<BillingAccountPreview[]>([])
+  const [totalStaffCount, setTotalStaffCount] = useState(0)
+  const [staffLoading, setStaffLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      setStaffLoading(true)
+      try {
+        const res = await getAccounts()
+        if (res?.data?.accounts) {
+          const accts: OrgAccount[] = res.data.accounts
+          setAccountsPreview(accts.map(a => ({
+            id: a.id,
+            name: a.name,
+            email: a.email,
+            status: a.status,
+          })))
+          setTotalStaffCount(accts.length)
+        }
+      } catch (err) {
+        console.error('Failed to fetch team accounts for billing summary:', err)
+      } finally {
+        setStaffLoading(false)
+      }
+    }
+    fetchAccounts()
+  }, [])
+
+  const seats = totalStaffCount || 1 // at least 1 (the account owner) while loading/empty
+  const { total, breakdown, isCustom } = computeBilling(seats)
+  const planLabel = getPlanLabel(seats)
+  const nextRate = nextSeatRate(seats)
+  const atSelfServeCeiling = seats >= SELF_SERVE_MAX
 
   const invoices = [
     { id: 'INV-0024', date: 'Jun 1, 2026',  amount: '₦500,000', status: 'paid' },
@@ -133,7 +263,7 @@ export default function BillingPage() {
   ]
 
   const features = [
-    'Up to 5 seats (CEO, HR, Ops, etc.)',
+    'Add as many inboxes as you need',
     'All email providers',
     'Unlimited Business Bible size',
     'Custom timer per staff level',
@@ -171,63 +301,121 @@ export default function BillingPage() {
                   <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: GOLD_LIGHT }}>Current plan</span>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: GREEN_BG, color: '#4ABA7A', border: '1px solid rgba(74,186,122,0.2)' }}>Active</span>
                 </div>
-                <h2 style={{ fontSize: 26, fontWeight: 800, color: '#fff', letterSpacing: '-0.025em', marginBottom: 5 }}>Team</h2>
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Up to 5 seats · All features included</p>
+                <h2 style={{ fontSize: 26, fontWeight: 800, color: '#fff', letterSpacing: '-0.025em', marginBottom: 5 }}>{planLabel}</h2>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                  {isCustom ? 'Custom seat count · Enterprise pricing' : `${seats} ${seats === 1 ? 'seat' : 'seats'} · pay only for what you use`}
+                </p>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontSize: 32, fontWeight: 800, color: GOLD_LIGHT, letterSpacing: '-0.03em', lineHeight: 1 }}>₦500,000</p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>per month</p>
+                <p style={{ fontSize: 32, fontWeight: 800, color: GOLD_LIGHT, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                  {isCustom ? 'Custom' : formatNaira(total)}
+                </p>
+                {!isCustom && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>per month</p>}
               </div>
             </div>
 
-            {/* Plan meta */}
-            <div className="plan-meta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 22 }}>
-              {[
-                { label: 'Next billing', value: 'Jul 1, 2026' },
-                { label: 'Seats used',   value: '5 of 5' },
-                { label: 'Cycle',        value: 'Monthly' },
-              ].map(m => (
-                <div key={m.label} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 11, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>{m.label}</p>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{m.value}</p>
+            {/* Seat summary — read-only here; seats change by adding/removing
+                real people in Team Members below, not by dialing a number */}
+            {!isCustom && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 11, padding: '14px 16px', marginBottom: 14 }}>
+                <div>
+                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>Seats (team accounts)</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                    {staffLoading ? 'Loading…' : `${seats} of ${SELF_SERVE_MAX} self-serve max`}
+                  </p>
                 </div>
-              ))}
-            </div>
+                <Users size={20} color="rgba(255,255,255,0.35)" />
+              </div>
+            )}
+
+            {/* Pricing breakdown */}
+            {!isCustom && (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 11, padding: '14px 16px', marginBottom: 14 }}>
+                {breakdown.map((b, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 12 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.55)' }}>{b.label} <span style={{ color: 'rgba(255,255,255,0.3)' }}>· {formatNaira(b.rate)}/seat</span></span>
+                    <span style={{ color: '#fff', fontWeight: 700 }}>{formatNaira(b.subtotal)}</span>
+                  </div>
+                ))}
+                {nextRate !== null && nextRate < (breakdown[breakdown.length - 1]?.rate ?? 0) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <Info size={12} color={GOLD_LIGHT} />
+                    <span style={{ fontSize: 11, color: GOLD_LIGHT }}>Add one more seat and your rate drops to {formatNaira(nextRate)}/seat</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Plan actions */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isCustom ? '1fr' : '1fr', gap: 10 }}>
               <a
-                href="https://wa.me/2349000000000?text=I'd%20like%20to%20upgrade%20to%20Enterprise"
+                href="https://wa.me/2349000000000?text=I'd%20like%20to%20talk%20about%20Enterprise%20pricing"
                 target="_blank" rel="noopener noreferrer"
-                onMouseEnter={() => setUpgradeHov(true)}
-                onMouseLeave={() => setUpgradeHov(false)}
+                onMouseEnter={() => setEnterpriseHov(true)}
+                onMouseLeave={() => setEnterpriseHov(false)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                  background: upgradeHov ? GOLD : GOLD_LIGHT,
+                  background: enterpriseHov ? GOLD : GOLD_LIGHT,
                   color: INK, fontFamily: "'Plus Jakarta Sans', sans-serif",
                   fontSize: 12, fontWeight: 700, padding: '12px',
                   borderRadius: 11, textDecoration: 'none',
                   transition: 'all .2s',
-                  transform: upgradeHov ? 'translateY(-1px)' : 'none',
-                  boxShadow: upgradeHov ? '0 6px 18px rgba(184,150,46,0.3)' : 'none',
+                  transform: enterpriseHov ? 'translateY(-1px)' : 'none',
+                  boxShadow: enterpriseHov ? '0 6px 18px rgba(184,150,46,0.3)' : 'none',
                 }}>
-                <Zap size={13} /> Upgrade to Enterprise
+                <Zap size={13} /> {isCustom || atSelfServeCeiling ? 'Talk to us about Enterprise' : 'Need more than 15 seats? Talk to us'}
               </a>
-              <button
-                onMouseEnter={() => setDownHov(true)}
-                onMouseLeave={() => setDownHov(false)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                  background: downHov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.7)',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 12, fontWeight: 600,
-                  padding: '12px', borderRadius: 11, border: '1px solid rgba(255,255,255,0.1)',
-                  cursor: 'pointer', transition: 'all .18s',
-                }}>
-                Downgrade plan
-              </button>
             </div>
           </div>
+
+          {/* ── TEAM ACCOUNTS ── */}
+          <Card hov={membersHov} onEnter={() => setMembersHov(true)} onLeave={() => setMembersHov(false)}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <SectionTitle>
+                Team accounts{!staffLoading && <span style={{ color: INK_40, fontWeight: 500 }}> · {totalStaffCount} {totalStaffCount === 1 ? 'seat' : 'seats'}</span>}
+              </SectionTitle>
+              <Link
+                href="/dashboard/settings"
+                onMouseEnter={() => setAddMemberHov(true)}
+                onMouseLeave={() => setAddMemberHov(false)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 12, fontWeight: 700,
+                  color: addMemberHov ? INK : GREEN,
+                  background: addMemberHov ? CREAM : 'transparent',
+                  border: `1.5px solid ${addMemberHov ? INK_20 : 'rgba(46,125,82,0.25)'}`,
+                  borderRadius: 9, padding: '7px 13px',
+                  textDecoration: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  transition: 'all .18s', whiteSpace: 'nowrap',
+                }}>
+                <UserPlus size={13} /> Invite member
+              </Link>
+            </div>
+
+            {staffLoading ? (
+              <p style={{ fontSize: 12, color: INK_40, padding: '8px 0' }}>Loading team accounts…</p>
+            ) : accountsPreview.length === 0 ? (
+              <p style={{ fontSize: 12, color: INK_40, padding: '8px 0' }}>Just you so far — invite your team from Settings to add seats.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {accountsPreview.slice(0, 5).map((m, i) => (
+                  <div key={m.id} style={{ borderBottom: i < Math.min(accountsPreview.length, 5) - 1 ? `1px solid ${INK_06}` : 'none' }}>
+                    <MemberRow m={m} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {totalStaffCount > 5 && (
+              <Link href="/dashboard/settings" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 700, color: GREEN, textDecoration: 'none', marginTop: 12, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                View all {totalStaffCount} accounts <ChevronRight size={13} />
+              </Link>
+            )}
+
+            <p style={{ fontSize: 11, color: INK_40, marginTop: 14, lineHeight: 1.6 }}>
+              Inviting or removing an account updates your bill automatically — invites, roles, and pending status are managed in Settings.
+            </p>
+          </Card>
 
           {/* ── FEATURES INCLUDED ── */}
           <Card hov={featHov} onEnter={() => setFeatHov(true)} onLeave={() => setFeatHov(false)}>
