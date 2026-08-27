@@ -1,50 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Filter, ChevronDown, ChevronRight, Mail } from 'lucide-react'
+import { getActivityMetrics, getActivityLogs } from '@/lib/api/activity'
 
-const activities = [
-  {
-    id: 1, from: 'Tosin Adeyemi', role: 'Operations Manager', dept: 'Operations',
-    summary: 'Requesting approval to reorder 50kg of rice for kitchen before Friday\'s service.',
-    original: 'Hi, I wanted to check if we can place an order for 50kg of rice from our usual supplier before Friday. We\'re running low and will definitely need it for the weekend service.',
-    suggested: 'Approved. Please ensure the order is logged in the system and a receipt submitted to accounts before close of work today.',
-    sent: 'Approved. Please ensure the order is logged in the system and a receipt submitted to accounts before close of work today.',
-    status: 'sent', method: 'YES', time: 'Today, 9:02 AM', date: 'Jun 24, 2026'
-  },
-  {
-    id: 2, from: 'Funke Balogun', role: 'HR Manager', dept: 'Human Resources',
-    summary: 'Asking about the new remote work policy effective next month.',
-    original: 'Good morning. I wanted to confirm the details of the new remote work policy that takes effect in July. Can you confirm who it applies to and the reporting requirements?',
-    suggested: 'The remote work policy applies to all non-client-facing staff from July 1. Two days per week maximum. Reporting remains daily via the team Slack channel.',
-    sent: 'The remote work policy applies to all non-client-facing staff from July 1. Two days per week maximum. Reporting remains daily via the team Slack channel.',
-    status: 'sent', method: 'YES', time: 'Today, 8:44 AM', date: 'Jun 24, 2026'
-  },
-  {
-    id: 3, from: 'Emeka Obi', role: 'Finance Analyst', dept: 'Finance',
-    summary: 'Submitted Q3 variance report for review and sign-off.',
-    original: 'Please find attached the Q3 variance report. Key highlights on page 4. Awaiting your sign-off before I share with the board on Thursday.',
-    suggested: 'Received. I\'ll review and provide sign-off before Thursday morning.',
-    sent: 'Received and reviewed. Please proceed with sharing to the board. I\'ll follow up directly if I have questions after the presentation.',
-    status: 'edited', method: 'Edited', time: 'Today, 8:17 AM', date: 'Jun 24, 2026'
-  },
-  {
-    id: 4, from: 'Chidi Nwosu', role: 'Product Manager', dept: 'Product',
-    summary: 'Requesting two days off next week for a family event.',
-    original: 'Hi, requesting two days off on Monday and Tuesday next week for a family event. My work is covered — I\'ve briefed Amaka.',
-    suggested: 'Approved. Enjoy the time with your family.',
-    sent: 'Approved. Enjoy the time with your family.',
-    status: 'auto-sent', method: 'Auto-sent', time: 'Yesterday, 4:12 PM', date: 'Jun 23, 2026'
-  },
-  {
-    id: 5, from: 'Aisha Mohammed', role: 'Sales Lead', dept: 'Sales',
-    summary: 'Client follow-up on the Kano proposal — needs direction on pricing.',
-    original: 'The Kano client came back on the proposal. They\'re comfortable with the scope but want a 15% discount on the implementation fee. Do we want to give it to them?',
-    suggested: 'We can offer a 10% discount on the implementation fee only. This applies if they sign before end of the month.',
-    sent: 'We can offer a 10% discount on the implementation fee only. This applies if they sign before end of the month.',
-    status: 'sent', method: 'YES', time: 'Yesterday, 2:30 PM', date: 'Jun 23, 2026'
-  },
-]
+// Data replaced with state from API
 
 const statusColor: Record<string, string> = {
   sent: 'badge-lime',
@@ -57,6 +17,60 @@ export default function ActivityPage() {
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
   const [filterDept, setFilterDept] = useState('All')
+  const [metrics, setMetrics] = useState({ today: 0, thisWeek: 0, thisMonth: 0, allTime: 0 })
+  const [activities, setActivities] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [meta, setMeta] = useState<any>(null)
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await getActivityMetrics()
+        if (res?.data?.metrics) {
+          setMetrics(res.data.metrics)
+        }
+      } catch (err) {
+        console.error('Failed to fetch activity metrics:', err)
+      }
+    }
+    fetchMetrics()
+  }, [])
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true)
+      try {
+        const logsRes = await getActivityLogs(page)
+        
+        if (logsRes?.data?.logs) {
+          setActivities(logsRes.data.logs.map((item: any) => {
+            const dateObj = new Date(item.sentAt || item.createdAt)
+            return {
+              id: item.id || item.uid,
+              from: item.staff?.name || item.senderEmail || 'Unknown',
+              role: item.staff?.role || 'Unknown',
+              dept: '',
+              summary: (item.originalMessage || '').substring(0, 100) + '...',
+              original: item.originalMessage || '',
+              suggested: item.aiSuggested || '',
+              sent: item.responseSent || '',
+              status: (item.sentType || 'pending').toLowerCase(),
+              method: item.sentType || 'Unknown',
+              time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              date: dateObj.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+            }
+          }))
+          setMeta(logsRes.data.meta)
+        }
+      } catch (err) {
+        console.error('Failed to fetch data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchLogs()
+  }, [page])
 
   const depts = ['All', 'Operations', 'Human Resources', 'Finance', 'Sales', 'Product']
 
@@ -81,10 +95,10 @@ export default function ActivityPage() {
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Today', value: '23' },
-          { label: 'This week', value: '141' },
-          { label: 'This month', value: '574' },
-          { label: 'All time', value: '1,203' },
+          { label: 'Today', value: metrics.today.toLocaleString() },
+          { label: 'This week', value: metrics.thisWeek.toLocaleString() },
+          { label: 'This month', value: metrics.thisMonth.toLocaleString() },
+          { label: 'All time', value: metrics.allTime.toLocaleString() },
         ].map(s => (
           <div key={s.label} className="stat-card">
             <p className="text-2xl font-bold text-navy" style={{ letterSpacing: '-0.02em' }}>{s.value}</p>
@@ -138,7 +152,7 @@ export default function ActivityPage() {
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <p className="text-sm font-bold text-navy">{item.from}</p>
                   <p className="text-xs text-midgray">· {item.role}</p>
-                  <span className={`badge ${statusColor[item.status]} ml-auto`}>{item.status === 'auto-sent' ? 'Auto-sent' : item.status.charAt(0).toUpperCase() + item.status.slice(1)}</span>
+                  <span className={`badge ${statusColor[item.status] || 'badge-navy'} ml-auto`}>{item.status === 'auto-sent' ? 'Auto-sent' : item.status.charAt(0).toUpperCase() + item.status.slice(1)}</span>
                 </div>
                 <p className="text-xs text-midgray leading-relaxed">{item.summary}</p>
                 <p className="text-xs text-silver mt-1">{item.time}</p>
@@ -180,11 +194,33 @@ export default function ActivityPage() {
         ))}
       </div>
 
-      {filtered.length === 0 && (
+      {filtered.length === 0 && !loading && (
         <div className="card text-center py-12">
           <Mail size={32} className="text-silver mx-auto mb-3" />
           <p className="text-sm font-bold text-navy mb-1">No results found</p>
           <p className="text-xs text-midgray">Try adjusting your search or filter.</p>
+        </div>
+      )}
+
+      {/* Pagination controls */}
+      {meta && (
+        <div className="mt-6 flex justify-center gap-4">
+          {meta.previousPage && (
+            <button 
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-4 py-2 bg-white border border-border text-navy text-sm font-bold rounded-lg hover:bg-offwhite transition-colors"
+            >
+              Previous Page
+            </button>
+          )}
+          {meta.nextPage && (
+            <button 
+              onClick={() => setPage(p => p + 1)}
+              className="px-4 py-2 bg-navy text-white text-sm font-bold rounded-lg hover:bg-navy/90 transition-colors"
+            >
+              Next Page
+            </button>
+          )}
         </div>
       )}
     </main>
