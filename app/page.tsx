@@ -603,7 +603,7 @@ function FinalCTA() {
 }
 
 function Footer() {
- const columns: [string, string[]][] = [
+  const columns: [string, string[]][] = [
   ['Product', ['How it works', 'Features', 'Pricing']],
   ['Company', ['About', 'Blog', 'Careers', 'Contact']],
   ['Legal', ['Privacy', 'Terms', 'Security']],
