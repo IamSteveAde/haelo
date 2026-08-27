@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Save, CheckCircle, AlertCircle, Zap, Bell, Layers, Shield, Mail, Smartphone } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Save, CheckCircle, AlertCircle, Zap, Bell, Layers, Shield, Mail, Smartphone, Plus } from 'lucide-react'
+import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings } from '@/lib/api/onboard'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK    = '#11270B'
@@ -144,13 +145,13 @@ function TimerModeOpt({ id, label, tagline, desc, icon, active, onClick }: {
 }
 
 // ── EMAIL PROVIDER OPTION ─────────────────────────────────────────────────────
-function EmailProviderOpt({ id, label, sub, color, letter, active, onClick }: {
-  id: string; label: string; sub: string; color: string; letter: string; active: boolean; onClick: () => void
+function EmailProviderOpt({ id, label, sub, color, letter, active, connecting, onClick }: {
+  id: string; label: string; sub: string; color: string; letter: string; active: boolean; connecting?: boolean; onClick: () => void
 }) {
   const [hov, setHov] = useState(false)
   return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: active ? WHITE : hov ? CREAM : 'transparent', border: `1.5px solid ${active ? INK : hov ? INK_20 : INK_10}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s' }}>
+    <button onClick={onClick} disabled={connecting} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: active ? WHITE : hov ? CREAM : 'transparent', border: `1.5px solid ${active ? INK : hov ? INK_20 : INK_10}`, borderRadius: 12, cursor: connecting ? 'not-allowed' : 'pointer', textAlign: 'left', width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .18s', opacity: connecting ? 0.7 : 1 }}>
       <div style={{ width: 36, height: 36, borderRadius: 9, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
         {letter}
       </div>
@@ -161,9 +162,14 @@ function EmailProviderOpt({ id, label, sub, color, letter, active, onClick }: {
       {active && (
         <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: GREEN_BG, color: GREEN, flexShrink: 0 }}>Connected</span>
       )}
-      <div style={{ width: 16, height: 16, borderRadius: '50%', border: `1.5px solid ${active ? INK : INK_20}`, flexShrink: 0, background: active ? INK : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .18s' }}>
-        {active && <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />}
-      </div>
+      {connecting && (
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: INK_06, color: INK_60, flexShrink: 0 }}>Connecting...</span>
+      )}
+      {!connecting && (
+        <div style={{ width: 16, height: 16, borderRadius: '50%', border: `1.5px solid ${active ? INK : INK_20}`, flexShrink: 0, background: active ? INK : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .18s' }}>
+          {active && <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />}
+        </div>
+      )}
     </button>
   )
 }
@@ -179,16 +185,16 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 }
 
 // ── SAVE BUTTON ───────────────────────────────────────────────────────────────
-function SaveBtn({ onClick, saved }: { onClick: () => void; saved: boolean }) {
-  const [hov, setHov] = useState(false)
-  return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: hov ? '#1a3a12' : INK, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 700, padding: '12px 24px', borderRadius: 11, border: 'none', cursor: 'pointer', transition: 'all .2s', transform: hov ? 'translateY(-1px)' : 'none', boxShadow: hov ? '0 6px 20px rgba(17,39,11,0.22)' : 'none' }}>
-      <Save size={14} />
-      {saved ? 'Saved' : 'Save settings'}
-    </button>
-  )
-}
+// function SaveBtn({ onClick, saved }: { onClick: () => void; saved: boolean }) {
+//   const [hov, setHov] = useState(false)
+//   return (
+//     <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+//       style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: hov ? '#1a3a12' : INK, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 700, padding: '12px 24px', borderRadius: 11, border: 'none', cursor: 'pointer', transition: 'all .2s', transform: hov ? 'translateY(-1px)' : 'none', boxShadow: hov ? '0 6px 20px rgba(17,39,11,0.22)' : 'none' }}>
+//       <Save size={14} />
+//       {saved ? 'Saved' : 'Save settings'}
+//     </button>
+//   )
+// }
 
 // ── DANGER BUTTON ──────────────────────────────────────────────────────────────
 function DangerBtn({ label }: { label: string }) {
@@ -203,14 +209,20 @@ function DangerBtn({ label }: { label: string }) {
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const [timerMode, setTimerMode] = useState<'auto-send' | 'remind' | 'hybrid'>('hybrid')
-  const [timer, setTimer]         = useState('10')
-  const [remindFreq, setRemindFreq] = useState('5')
+  const [timerMode, setTimerMode] = useState<string>('')
+  const [timer, setTimer]         = useState('')
+  const [remindFreq, setRemindFreq] = useState('')
   const [emailProvider, setEmailProvider] = useState('gmail')
   const [waNum, setWaNum]         = useState('+234 801 234 5678')
   const [waVerified, setWaVerified] = useState(true)
   const [saved, setSaved]         = useState(false)
   const [saveFlash, setSaveFlash] = useState(false)
+  const [connectedProviders, setConnectedProviders] = useState<any[]>([])
+  const [showAddProvider, setShowAddProvider] = useState(false)
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
+  
+  const loadedConfigStr = useRef<string | null>(null)
+  const loadedNotifsStr = useRef<string | null>(null)
 
   const [notifs, setNotifs] = useState({
     unrecognised: true,
@@ -218,6 +230,128 @@ export default function SettingsPage() {
     weeklyReport: false,
     errors: true,
   })
+
+  // Timer load effect
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const res = await getHaeloTone()
+        if (res?.data) {
+          if (res.data.timer) {
+            setTimerMode(res.data.timer)
+          }
+          if (res.data.timerConfig) {
+            setTimer(String(res.data.timerConfig.sendAfter))
+            setRemindFreq(String(res.data.timerConfig.remindAfter))
+          }
+          loadedConfigStr.current = JSON.stringify({ 
+            timer: res.data.timer || '', 
+            sendAfter: String(res.data.timerConfig?.sendAfter || '0'), 
+            remindAfter: String(res.data.timerConfig?.remindAfter || '0') 
+          })
+        } else {
+          // If data is null, none of it be clicked and times set to 0
+          setTimerMode('')
+          setTimer('0')
+          setRemindFreq('0')
+          loadedConfigStr.current = JSON.stringify({ timer: '', sendAfter: '0', remindAfter: '0' })
+        }
+      } catch (err) {
+        console.error('Failed to load haelo tone config:', err)
+      }
+    }
+    const loadProviders = async () => {
+      try {
+        const res = await getProviders()
+        if (res?.data?.providers) {
+          setConnectedProviders(res.data.providers)
+          if (res.data.providers.length > 0) {
+            const first = res.data.providers[0]
+            if (first.provider.toLowerCase().includes('gmail')) setEmailProvider('gmail')
+            else if (first.provider.toLowerCase().includes('outlook') || first.provider.toLowerCase().includes('microsoft')) setEmailProvider('outlook')
+            else if (first.provider.toLowerCase().includes('zoho')) setEmailProvider('zoho')
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch providers:', err)
+      }
+    }
+    const loadNotifications = async () => {
+      try {
+        const res = await getNotificationSettings()
+        if (res?.data?.settings) {
+          const s = res.data.settings
+          setNotifs({
+            unrecognised: s.unrecognizedSenderAlerts ?? true,
+            dailySummary: s.dailyActivitySummary ?? true,
+            weeklyReport: s.weeklyPerformanceReport ?? false,
+            errors: s.errorAndConnectionAlerts ?? true,
+          })
+          loadedNotifsStr.current = JSON.stringify({
+            unrecognised: s.unrecognizedSenderAlerts ?? true,
+            dailySummary: s.dailyActivitySummary ?? true,
+            weeklyReport: s.weeklyPerformanceReport ?? false,
+            errors: s.errorAndConnectionAlerts ?? true,
+          })
+        }
+      } catch (err) {
+        console.error('Failed to fetch notification settings:', err)
+      }
+    }
+    
+    loadConfig()
+    loadProviders()
+    loadNotifications()
+  }, [])
+
+  // Timer auto-save effect
+  useEffect(() => {
+    if (loadedConfigStr.current === null) return // still loading
+    
+    const currentConfigStr = JSON.stringify({ timer: timerMode, sendAfter: timer, remindAfter: remindFreq })
+    if (currentConfigStr === loadedConfigStr.current) return // No real change
+
+    const saveTimer = async () => {
+      try {
+        const payload: any = {
+          timerConfig: {
+            sendAfter: Number(timer),
+            remindAfter: Number(remindFreq)
+          }
+        }
+        if (timerMode) {
+          payload.timer = timerMode
+        }
+        await saveTimerConfig(payload)
+      } catch (err) {
+        console.error('Failed to save timer config:', err)
+      }
+    }
+    saveTimer()
+  }, [timerMode, timer, remindFreq])
+
+  // Notifications auto-save effect
+  useEffect(() => {
+    if (loadedNotifsStr.current === null) return // still loading
+
+    const currentNotifsStr = JSON.stringify(notifs)
+    if (currentNotifsStr === loadedNotifsStr.current) return // No real change
+
+    const saveNotifs = async () => {
+      try {
+        await saveNotificationSettings({
+          unrecognizedSenderAlerts: notifs.unrecognised,
+          dailyActivitySummary: notifs.dailySummary,
+          weeklyPerformanceReport: notifs.weeklyReport,
+          errorAndConnectionAlerts: notifs.errors
+        })
+        loadedNotifsStr.current = currentNotifsStr
+      } catch (err) {
+        console.error('Failed to save notification settings:', err)
+      }
+    }
+    saveNotifs()
+  }, [notifs])
 
   // Card hover states
   const [timerHov,   setTimerHov]   = useState(false)
@@ -285,15 +419,19 @@ export default function SettingsPage() {
             <div className="two-col" style={{ display: 'grid', gridTemplateColumns: timerMode !== 'auto-send' ? '1fr 1fr' : '1fr', gap: 14 }}>
               <div>
                 <FieldLabel>Auto-send after</FieldLabel>
-                <SelectInput value={timer} onChange={setTimer}>
-                  {['5', '10', '15', '20', '30', '60'].map(v => <option key={v} value={v}>{v} minutes</option>)}
+                <SelectInput value={timer || '10'} onChange={setTimer}>
+                  {(timer === '0' ? ['0', '5', '10', '15', '20', '30', '60'] : ['5', '10', '15', '20', '30', '60']).map(v => (
+                    <option key={v} value={v}>{v === '0' ? 'None' : `${v} minutes`}</option>
+                  ))}
                 </SelectInput>
               </div>
               {timerMode !== 'auto-send' && (
                 <div>
                   <FieldLabel>Reminder every</FieldLabel>
-                  <SelectInput value={remindFreq} onChange={setRemindFreq}>
-                    {['3', '5', '10', '15'].map(v => <option key={v} value={v}>{v} minutes</option>)}
+                  <SelectInput value={remindFreq || '5'} onChange={setRemindFreq}>
+                    {(remindFreq === '0' ? ['0', '3', '5', '10', '15'] : ['3', '5', '10', '15']).map(v => (
+                      <option key={v} value={v}>{v === '0' ? 'None' : `${v} minutes`}</option>
+                    ))}
                   </SelectInput>
                 </div>
               )}
@@ -305,12 +443,98 @@ export default function SettingsPage() {
             <SectionHeader icon={<Mail size={17} />} title="Email connection" desc="The inbox Haelo monitors. OAuth only — your password is never stored or seen." />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-              {emailProviders.map(p => (
-                <EmailProviderOpt key={p.id} {...p} active={emailProvider === p.id} onClick={() => setEmailProvider(p.id)} />
-              ))}
+              {connectedProviders.map(cp => {
+                const isGmail = cp.provider.toLowerCase().includes('gmail')
+                const isOutlook = cp.provider.toLowerCase().includes('outlook') || cp.provider.toLowerCase().includes('microsoft')
+                const isZoho = cp.provider.toLowerCase().includes('zoho')
+                const matchedId = isGmail ? 'gmail' : isOutlook ? 'outlook' : isZoho ? 'zoho' : 'gmail'
+                const pInfo = emailProviders.find(ep => ep.id === matchedId)!
+                
+                return (
+                  <EmailProviderOpt 
+                    key={cp.id} 
+                    {...pInfo} 
+                    sub={cp.email || pInfo.sub}
+                    active={emailProvider === pInfo.id} 
+                    onClick={() => setEmailProvider(pInfo.id)} 
+                  />
+                )
+              })}
+              
+              {connectedProviders.length === 0 && (
+                <div style={{ padding: '14px 16px', background: CREAM, border: `1.5px dashed ${INK_20}`, borderRadius: 12, textAlign: 'center' }}>
+                  <p style={{ fontSize: 13, color: INK_60 }}>No email clients connected yet.</p>
+                </div>
+              )}
             </div>
 
-            <DangerBtn label="Revoke email access" />
+            {showAddProvider ? (
+              <div className="fade-in" style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${INK_06}` }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: 12 }}>Select a provider to connect</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {emailProviders.filter(ep => {
+                    // Filter out already connected providers
+                    const isConnected = connectedProviders.some(cp => {
+                      const isGmail = cp.provider.toLowerCase().includes('gmail')
+                      const isOutlook = cp.provider.toLowerCase().includes('outlook') || cp.provider.toLowerCase().includes('microsoft')
+                      const isZoho = cp.provider.toLowerCase().includes('zoho')
+                      const matchedId = isGmail ? 'gmail' : isOutlook ? 'outlook' : isZoho ? 'zoho' : 'gmail'
+                      return matchedId === ep.id
+                    })
+                    return !isConnected
+                  }).map(p => (
+                    <EmailProviderOpt 
+                      key={p.id} 
+                      {...p} 
+                      active={false}
+                      connecting={connectingProvider === p.id} 
+                      onClick={async () => {
+                        try {
+                          const isGmail = p.id === 'gmail'
+                          const isZoho = p.id === 'zoho'
+                          const providerStr = isGmail ? 'gmail.com' : isZoho ? 'zoho.com' : ''
+                          
+                          if (!providerStr) {
+                            alert('Provider not supported yet')
+                            return
+                          }
+                          
+                          setConnectingProvider(p.id)
+                          const res = await connectEmail(providerStr as any)
+                          
+                          if (res.data?.authUrl) {
+                            const width = 500;
+                            const height = 650;
+                            const left = window.innerWidth / 2 - width / 2;
+                            const top = window.screen.availHeight / 2 - height / 2;
+                            
+                            window.open(
+                              res.data.authUrl,
+                              'OAuthPopup',
+                              `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+                            )
+                            setShowAddProvider(false)
+                          }
+                        } catch (err) {
+                          console.error('Failed to connect email', err)
+                          alert('Failed to connect email')
+                        } finally {
+                          setConnectingProvider(null)
+                        }
+                      }} 
+                    />
+                  ))}
+                  <button onClick={() => setShowAddProvider(false)} style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: INK_60, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '4px 0', marginTop: 4 }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button onClick={() => setShowAddProvider(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: `1.5px solid ${INK_20}`, color: INK, padding: '7px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all .18s' }}>
+                  <Plus size={14} /> Add email client
+                </button>
+                {connectedProviders.length > 0 && <DangerBtn label="Revoke email access" />}
+              </div>
+            )}
           </SectionCard>
 
           {/* ── 3. WHATSAPP ── */}
@@ -378,7 +602,7 @@ export default function SettingsPage() {
           </SectionCard>
 
           {/* ── SAVE ROW ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 4 }}>
+          {/* <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 4 }}>
             <SaveBtn onClick={handleSave} saved={saveFlash} />
             {saveFlash && (
               <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -386,7 +610,7 @@ export default function SettingsPage() {
                 <span style={{ fontSize: 12, fontWeight: 600, color: GREEN }}>All changes saved</span>
               </div>
             )}
-          </div>
+          </div> */}
 
         </div>
       </main>

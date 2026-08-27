@@ -42,8 +42,38 @@ export const saveHaeloTone = async (tone: string) => {
   })
 }
 
-export const saveTimerConfig = async (payload: { timer: string, timerConfig: { sendAfter: number, remindAfter: number } }) => {
+export const saveTimerConfig = async (payload: { timer?: string, timerConfig?: { sendAfter?: number, remindAfter?: number } }) => {
   return await apiFetch('/api/onboard/haelo-tone', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export const getHaeloTone = async () => {
+  return await apiFetch('/api/onboard/haelo-tone', {
+    method: 'GET'
+  })
+}
+
+export const getProviders = async () => {
+  return await apiFetch('/api/onboard/providers', {
+    method: 'GET'
+  })
+}
+
+export const getNotificationSettings = async () => {
+  return await apiFetch('/api/onboard/notifications', {
+    method: 'GET'
+  })
+}
+
+export const saveNotificationSettings = async (payload: {
+  unrecognizedSenderAlerts: boolean;
+  dailyActivitySummary: boolean;
+  weeklyPerformanceReport: boolean;
+  errorAndConnectionAlerts: boolean;
+}) => {
+  return await apiFetch('/api/onboard/notifications', {
     method: 'POST',
     body: JSON.stringify(payload)
   })
