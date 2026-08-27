@@ -603,11 +603,11 @@ function FinalCTA() {
 }
 
 function Footer() {
-  const columns = [
-    ['Product', ['How it works', 'Features', 'Pricing']],
-    ['Company', ['About', 'Blog', 'Careers', 'Contact']],
-    ['Legal', ['Privacy', 'Terms', 'Security']],
-  ]
+ const columns: [string, string[]][] = [
+  ['Product', ['How it works', 'Features', 'Pricing']],
+  ['Company', ['About', 'Blog', 'Careers', 'Contact']],
+  ['Legal', ['Privacy', 'Terms', 'Security']],
+]
 
   return (
     <footer>
