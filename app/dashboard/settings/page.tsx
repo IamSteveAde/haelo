@@ -364,6 +364,13 @@ export default function SettingsPage() {
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
   
+  const [userType, setUserType] = useState<string | null>(null)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserType(localStorage.getItem('userType'))
+    }
+  }, [])
+
   const loadedConfigStr = useRef<string | null>(null)
   const loadedNotifsStr = useRef<string | null>(null)
 
@@ -379,7 +386,7 @@ export default function SettingsPage() {
   const [accountsLoading, setAccountsLoading] = useState(true)
   const [accountsHov, setAccountsHov] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
-  const [resendingId, setResendingId] = useState<number | null>(null)
+  const [resendingEmail, setResendingEmail] = useState<string | null>(null)
   const [inviteToast, setInviteToast] = useState<string | null>(null)
 
   useEffect(() => {
@@ -387,7 +394,7 @@ export default function SettingsPage() {
       setAccountsLoading(true)
       try {
         const res = await getAccounts()
-        if (res?.data?.accounts) setAccounts(res.data.accounts)
+        if (res?.data) setAccounts(res.data)
       } catch (err) {
         console.error('Failed to fetch org accounts:', err)
       } finally {
@@ -404,23 +411,23 @@ export default function SettingsPage() {
     setTimeout(() => setInviteToast(null), 3000)
   }
 
-  const handleResend = async (id: number) => {
-    setResendingId(id)
+  const handleResend = async (email: string) => {
+    setResendingEmail(email)
     try {
-      await resendInvite(id)
+      await resendInvite(email)
       setInviteToast('Invite resent')
       setTimeout(() => setInviteToast(null), 3000)
     } catch (err) {
       console.error('Failed to resend invite:', err)
     } finally {
-      setResendingId(null)
+      setResendingEmail(null)
     }
   }
 
-  const handleRemove = async (id: number) => {
+  const handleRemove = async (email: string) => {
     try {
-      await removeAccount(id)
-      setAccounts(prev => prev.filter(a => a.id !== id))
+      await removeAccount(email)
+      setAccounts(prev => prev.filter(a => a.email !== email))
     } catch (err) {
       console.error('Failed to remove account:', err)
     }
@@ -612,6 +619,7 @@ export default function SettingsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 720 }}>
 
           {/* ── 0. TEAM ACCOUNTS ── */}
+          {userType === 'admin' && (
           <SectionCard hov={accountsHov} onEnter={() => setAccountsHov(true)} onLeave={() => setAccountsHov(false)}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 22, paddingBottom: 18, borderBottom: `1px solid ${INK_06}` }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -640,14 +648,15 @@ export default function SettingsPage() {
                   <AccountRow
                     key={a.id}
                     account={a}
-                    resending={resendingId === a.id}
-                    onResend={() => handleResend(a.id)}
-                    onRemove={() => handleRemove(a.id)}
+                    resending={resendingEmail === a.email}
+                    onResend={() => handleResend(a.email)}
+                    onRemove={() => handleRemove(a.email)}
                   />
                 ))}
               </div>
             )}
           </SectionCard>
+          )}
 
           {/* ── 1. TIMER ── */}
           <SectionCard hov={timerHov} onEnter={() => setTimerHov(true)} onLeave={() => setTimerHov(false)}>

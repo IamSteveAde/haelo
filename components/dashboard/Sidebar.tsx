@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -32,12 +32,12 @@ const SIDEBAR_CSS = `
 
 // ── NAV ITEMS ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { label: 'Overview',       href: '/dashboard/overview',       icon: LayoutDashboard },
-  { label: 'Business Bible', href: '/dashboard/business-bible', icon: BookOpen },
-  { label: 'Staff Directory',href: '/dashboard/staff',          icon: Users },
-  { label: 'Activity Log',   href: '/dashboard/activity',       icon: Activity },
-  { label: 'Settings',       href: '/dashboard/settings',       icon: Settings },
-  { label: 'Billing',        href: '/dashboard/billing',        icon: CreditCard },
+  { label: 'Overview',       href: '/dashboard/overview',       icon: LayoutDashboard, adminOnly: false },
+  { label: 'Business Bible', href: '/dashboard/business-bible', icon: BookOpen,        adminOnly: false },
+  { label: 'Staff Directory',href: '/dashboard/staff',          icon: Users,           adminOnly: false },
+  { label: 'Activity Log',   href: '/dashboard/activity',       icon: Activity,        adminOnly: false },
+  { label: 'Settings',       href: '/dashboard/settings',       icon: Settings,        adminOnly: false },
+  { label: 'Billing',        href: '/dashboard/billing',        icon: CreditCard,      adminOnly: true },
 ]
 
 // ── LOGO ─────────────────────────────────────────────────────────────────────
@@ -100,14 +100,15 @@ function NavLink({ label, href, icon: Icon, active, onClick }: {
 }
 
 // ── BOTTOM ACTION ─────────────────────────────────────────────────────────────
-function BottomAction({ href, external, icon, label, danger }: {
-  href: string; external?: boolean; icon: React.ReactNode; label: string; danger?: boolean
+function BottomAction({ href, external, icon, label, danger, onClick }: {
+  href: string; external?: boolean; icon: React.ReactNode; label: string; danger?: boolean; onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void
 }) {
   const [hov, setHov] = useState(false)
   const props = external ? { target: '_blank', rel: 'noopener noreferrer' } : {}
   return (
     <a
       href={href}
+      onClick={onClick}
       {...props}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
@@ -131,6 +132,13 @@ function BottomAction({ href, external, icon, label, danger }: {
 // ── SIDEBAR INNER ─────────────────────────────────────────────────────────────
 function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => void }) {
   const path = usePathname()
+  
+  const [userType, setUserType] = useState<string | null>(null)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserType(localStorage.getItem('userType'))
+    }
+  }, [])
 
   return (
     <aside style={{
@@ -184,14 +192,17 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
           Navigation
         </p>
 
-        {NAV_ITEMS.map(item => (
-          <NavLink
-            key={item.href}
-            {...item}
-            active={path === item.href}
-            onClick={onClose}
-          />
-        ))}
+        {NAV_ITEMS.map(item => {
+          if (item.adminOnly && userType !== 'admin') return null;
+          return (
+            <NavLink
+              key={item.href}
+              {...item}
+              active={path === item.href}
+              onClick={onClose}
+            />
+          )
+        })}
       </nav>
 
       {/* ── STATUS PILL ── */}
@@ -222,6 +233,11 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
           icon={<LogOut size={15} />}
           label="Sign out"
           danger
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              localStorage.clear();
+            }
+          }}
         />
       </div>
     </aside>

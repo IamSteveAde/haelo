@@ -60,6 +60,12 @@ export default function LoginPage() {
           res.data.token
         )
       }
+      if (res.data?.userType) {
+        localStorage.setItem(
+          'userType',
+          res.data.userType
+        )
+      }
 
       router.push('/dashboard')
     } catch (err: any) {
