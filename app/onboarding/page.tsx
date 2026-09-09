@@ -612,7 +612,7 @@ function StepWhatsApp({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) 
   }
 
   const handleCode = (i:number, val:string) => {
-    const cleanVal = val.replace(/\D/g, '')
+    const cleanVal = val.replace(/[^a-zA-Z0-9]/g, '')
     
     if (cleanVal.length > 1) {
       const next = [...code]
@@ -664,7 +664,7 @@ function StepWhatsApp({ onNext, onBack }: { onNext:()=>void; onBack:()=>void }) 
             <input
               key={i}
               ref={el => { refs.current[i] = el }}
-              type="text" inputMode="numeric" value={digit}
+              type="text" inputMode="text" value={digit}
               onChange={e => handleCode(i, e.target.value)}
               onKeyDown={e => { if (e.key==='Backspace' && !code[i] && i>0) { refs.current[i-1]?.focus(); const next = [...code]; next[i-1] = ''; setCode(next); } }}
               className="otp-input"

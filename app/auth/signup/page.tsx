@@ -2082,7 +2082,7 @@ export default function SignupPage() {
                     id="otp"
                     name="otp"
                     type="text"
-                    inputMode="numeric"
+                    inputMode="text"
                     autoComplete="one-time-code"
                     maxLength={8}
                     placeholder="000000"
@@ -2091,7 +2091,7 @@ export default function SignupPage() {
                       updateField(
                         'otp',
                         e.target.value.replace(
-                          /\D/g,
+                          /[^a-zA-Z0-9]/g,
                           ''
                         )
                       )
