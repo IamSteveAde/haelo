@@ -134,10 +134,23 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
   const path = usePathname()
   
   const [userType, setUserType] = useState<string | null>(null)
+  const [profile, setProfile] = useState<{name: string, email: string, userType: string} | null>(null)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setUserType(localStorage.getItem('userType'))
     }
+    
+    import('@/lib/api/auth').then(({ getProfile }) => {
+      getProfile().then(res => {
+        if (res?.data) {
+          setProfile(res.data)
+          setUserType(res.data.userType)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userType', res.data.userType)
+          }
+        }
+      }).catch(err => console.error(err))
+    })
   }, [])
 
   return (
@@ -169,12 +182,12 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
       <div style={{ padding: '16px 18px', borderBottom: `1px solid ${INK_06}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           {/* Avatar */}
-          <div style={{ width: 36, height: 36, background: INK, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0, letterSpacing: '0.02em' }}>
-            AO
+          <div style={{ width: 36, height: 36, background: INK, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+            {profile?.name ? profile.name.slice(0, 2) : '..'}
           </div>
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Adaeze Okonkwo</p>
-            <p style={{ fontSize: 11, color: INK_40, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>adaeze@company.com</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.name || '...'}</p>
+            <p style={{ fontSize: 11, color: INK_40, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.email || '...'}</p>
           </div>
         </div>
         {/* Plan badge */}

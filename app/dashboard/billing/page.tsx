@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CheckCircle, Download, CreditCard, ArrowRight, AlertCircle, Zap, ExternalLink, Info, Users, UserPlus, ChevronRight } from 'lucide-react'
 import { getAccounts, type OrgAccount } from '@/lib/api/accounts'
+import { getBillingHistory } from '@/lib/api/billing'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK    = '#11270B'
@@ -255,12 +256,51 @@ export default function BillingPage() {
   const nextRate = nextSeatRate(seats)
   const atSelfServeCeiling = seats >= SELF_SERVE_MAX
 
-  const invoices = [
-    { id: 'INV-0024', date: 'Jun 1, 2026',  amount: '₦500,000', status: 'paid' },
-    { id: 'INV-0023', date: 'May 1, 2026',  amount: '₦500,000', status: 'paid' },
-    { id: 'INV-0022', date: 'Apr 1, 2026',  amount: '₦500,000', status: 'paid' },
-    { id: 'INV-0021', date: 'Mar 1, 2026',  amount: '₦500,000', status: 'paid' },
-  ]
+  const [invoices, setInvoices] = useState<{ id: string; date: string; amount: string; status: string }[]>([])
+  const [invoicesPage, setInvoicesPage] = useState(1)
+  const [hasMoreInvoices, setHasMoreInvoices] = useState(false)
+  const [loadingInvoices, setLoadingInvoices] = useState(false)
+
+  const loadInvoices = async (page: number) => {
+    if (loadingInvoices) return
+    setLoadingInvoices(true)
+    try {
+      const res = await getBillingHistory(page, 5)
+      if (res?.data) {
+        const newInvoices = res.data.transactions.map((t: any) => ({
+          id: String(t.trxRef || t.id),
+          date: new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          amount: `₦${Number(t.amount).toLocaleString('en-NG')}`,
+          status: t.status?.toLowerCase() || 'unknown'
+        }))
+        if (page === 1) {
+          setInvoices(newInvoices)
+        } else {
+          setInvoices(prev => [...prev, ...newInvoices])
+        }
+        setHasMoreInvoices(res.data.meta.nextPage !== null)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingInvoices(false)
+    }
+  }
+
+  useEffect(() => {
+    loadInvoices(1)
+  }, [])
+
+  const handleInvoiceScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+    if (scrollHeight - scrollTop - clientHeight < 20) {
+      if (hasMoreInvoices && !loadingInvoices) {
+        const next = invoicesPage + 1
+        setInvoicesPage(next)
+        loadInvoices(next)
+      }
+    }
+  }
 
   const features = [
     'Add as many inboxes as you need',
@@ -426,10 +466,9 @@ export default function BillingPage() {
           </Card>
 
           {/* ── PAYMENT METHOD ── */}
-          <Card hov={payHov} onEnter={() => setPayHov(true)} onLeave={() => setPayHov(false)}>
+          {/* <Card hov={payHov} onEnter={() => setPayHov(true)} onLeave={() => setPayHov(false)}>
             <SectionTitle>Payment method</SectionTitle>
 
-            {/* Card display */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: CREAM, border: `1px solid ${INK_10}`, borderRadius: 12, marginBottom: 16 }}>
               <div style={{ width: 40, height: 40, background: NAVY, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <CreditCard size={17} color={GOLD_LIGHT} />
@@ -441,7 +480,6 @@ export default function BillingPage() {
               <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: GREEN_BG, color: GREEN }}>Default</span>
             </div>
 
-            {/* Update button */}
             <button
               onMouseEnter={() => setUpdateHov(true)}
               onMouseLeave={() => setUpdateHov(false)}
@@ -457,7 +495,7 @@ export default function BillingPage() {
               }}>
               <CreditCard size={13} /> Update payment method
             </button>
-          </Card>
+          </Card> */}
 
           {/* ── INVOICE HISTORY ── */}
           <div className="fade-up stagger-4"
@@ -486,7 +524,17 @@ export default function BillingPage() {
               ))}
             </div>
 
-            {invoices.map((inv, i) => <InvoiceRow key={inv.id} inv={inv} last={i === invoices.length - 1} />)}
+            <div 
+              onScroll={handleInvoiceScroll}
+              style={{ maxHeight: 250, overflowY: 'auto' }}
+            >
+              {invoices.length > 0 ? (
+                invoices.map((inv, i) => <InvoiceRow key={inv.id} inv={inv} last={i === invoices.length - 1} />)
+              ) : (
+                <p style={{ fontSize: 13, color: INK_40, padding: '20px', textAlign: 'center' }}>No invoices found.</p>
+              )}
+              {loadingInvoices && <p style={{ fontSize: 11, color: INK_40, padding: '10px 20px', textAlign: 'center' }}>Loading...</p>}
+            </div>
           </div>
 
           {/* ── CANCEL ── */}

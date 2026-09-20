@@ -525,7 +525,19 @@ export default function OverviewPage() {
     }
     fetchActivity()
     fetchEmailsHandled()
+    
+    import('@/lib/api/auth').then(({ getProfile }) => {
+      getProfile().then(res => {
+        if (res?.data?.name) {
+          // Capitalize first letter for the greeting
+          const capitalized = res.data.name.charAt(0).toUpperCase() + res.data.name.slice(1);
+          setUserName(capitalized);
+        }
+      }).catch(err => console.error(err))
+    })
   }, [])
+
+  const [userName, setUserName] = useState<string>('...')
 
   return (
     <>
@@ -539,7 +551,7 @@ export default function OverviewPage() {
           <div>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: GOLD, marginBottom: 6 }}>Dashboard</p>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: INK, letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 4 }}>
-              Good morning, Adaeze.
+              Good morning, {userName}.
             </h1>
             <p style={{ fontSize: 13, color: INK_60, fontWeight: 500 }}>
               Haelo has handled <strong style={{ color: INK, fontWeight: 700 }}>{emailsHandled} emails</strong> today. Your team is covered.

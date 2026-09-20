@@ -19,10 +19,22 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     }
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    })
+  } catch (error: any) {
+    // Catch network errors (e.g., ERR_CONNECTION_REFUSED)
+    if (typeof window !== 'undefined') {
+      localStorage.clear()
+      if (window.location.pathname !== '/auth/login') {
+        window.location.href = '/auth/login'
+      }
+    }
+    throw new Error('Network error. Connection refused or backend unreachable.')
+  }
 
   // Handle 401 Unauthorized globally
   if (response.status === 401) {

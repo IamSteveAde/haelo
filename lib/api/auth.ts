@@ -27,3 +27,6 @@ export const verifyOtp = async (token: string, otp: string) => {
     body: JSON.stringify({ token, otp })
   })
 }
+export const getProfile = async () => {
+  return await apiFetch('/api/profile', { method: 'GET' })
+}
