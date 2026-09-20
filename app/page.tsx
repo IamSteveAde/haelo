@@ -1,124 +1,63 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  ArrowRight,
+  Building2,
+  Check,
+  ChevronDown,
+  Inbox,
+  Layers3,
+  Menu,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  X,
+  Zap,
+} from 'lucide-react'
+import { Plus_Jakarta_Sans, Instrument_Serif } from 'next/font/google'
 
-const T = {
-  ink: '#10220D',
-  cream: '#F6F3EC',
-  gold: '#B99535',
-  green: '#2E7D52',
-  white: '#FFFFFF',
-  muted: '#687064',
-  line: 'rgba(16,34,13,.10)',
-}
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+})
 
-const inkA = (a: number) => `rgba(16,34,13,${a})`
-const creamA = (a: number) => `rgba(246,243,236,${a})`
-
-const SELF_SERVE_MAX = 15
-type Tier = { from: number; to: number; rate: number; label: string }
-const TIERS: Tier[] = [
-  { from: 1, to: 1, rate: 55000, label: 'Seat 1' },
-  { from: 2, to: 5, rate: 45000, label: 'Seats 2–5' },
-  { from: 6, to: 15, rate: 35000, label: 'Seats 6–15' },
-]
-
-type Breakdown = { label: string; qty: number; rate: number; subtotal: number }
-
-function computeBilling(seats: number) {
-  if (seats > SELF_SERVE_MAX) return { total: 0, breakdown: [] as Breakdown[], isCustom: true }
-  let remaining = seats
-  let total = 0
-  const breakdown: Breakdown[] = []
-
-  for (const tier of TIERS) {
-    if (remaining <= 0) break
-    const capacity = tier.to - tier.from + 1
-    const qty = Math.min(remaining, capacity)
-    if (qty > 0) {
-      const subtotal = qty * tier.rate
-      breakdown.push({ label: tier.label, qty, rate: tier.rate, subtotal })
-      total += subtotal
-      remaining -= qty
-    }
-  }
-  return { total, breakdown, isCustom: false }
-}
+const instrument = Instrument_Serif({
+  subsets: ['latin'],
+  variable: '--font-instrument',
+  weight: '400',
+})
 
 const formatNaira = (n: number) => `₦${n.toLocaleString('en-NG')}`
 
-function useReveal(threshold = 0.12) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setVisible(true)
-        observer.disconnect()
-      }
-    }, { threshold })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [threshold])
-
-  return { ref, visible }
+function Arrow({ className = '' }: { className?: string }) {
+  return <ArrowRight className={`h-4 w-4 ${className}`} />
 }
 
-function Arrow({ dark = false }: { dark?: boolean }) {
+function Logo({ light = false }: { light?: boolean }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-      stroke={dark ? T.ink : T.cream} strokeWidth="2.4"
-      strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12h14" />
-      <path d="m13 6 6 6-6 6" />
-    </svg>
-  )
-}
-
-function Check() {
-  return (
-    <span className="check">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        <path d="m4 8 2.3 2.3L12 4.7" stroke={T.gold} strokeWidth="1.8"
-          strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  )
-}
-
-function WA({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-    </svg>
-  )
-}
-
-function Eyebrow({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
-  return (
-    <div className={`eyebrow ${light ? 'eyebrow-light' : ''}`}>
-      <span />
-      {children}
-    </div>
-  )
-}
-
-function MagneticButton({
-  children, href, secondary = false,
-}: {
-  children: React.ReactNode
-  href: string
-  secondary?: boolean
-}) {
-  return (
-    <Link href={href} className={`magnetic-btn ${secondary ? 'secondary-btn' : ''}`}>
-      <span>{children}</span>
-      <Arrow dark={secondary} />
+    <Link
+      href="/"
+      className={`font-[var(--font-jakarta)] text-[23px] font-semibold tracking-[-0.075em] ${
+        light ? 'text-white' : 'text-[#111111]'
+      }`}
+    >
+      haelo<span className="text-[#6D28D9]">.</span>
     </Link>
+  )
+}
+
+function CheckItem({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5 text-[12px] leading-5 text-[#55555E]">
+      <span className="mt-[2px] flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#F0E8FF]">
+        <Check className="h-2.5 w-2.5 text-[#6D28D9]" strokeWidth={2.5} />
+      </span>
+      <span>{children}</span>
+    </div>
   )
 }
 
@@ -127,291 +66,1283 @@ function Navbar() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
+    const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const links = ['How it works', 'Features', 'Pricing']
+  const links = [
+    ['How it works', '#how-it-works'],
+    ['Features', '#features'],
+    ['Pricing', '#pricing'],
+  ]
 
   return (
-    <>
-      <nav className={`nav ${scrolled || open ? 'nav-scrolled' : ''}`}>
-        <Link href="/" className="logo">haelo<span>.</span></Link>
+    <nav
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+        scrolled || open
+          ? 'border-b border-black/[0.055] bg-white/80 shadow-[0_12px_40px_rgba(17,17,17,0.045)] backdrop-blur-2xl'
+          : 'bg-transparent'
+      }`}
+    >
+      <div className="mx-auto flex h-[76px] max-w-[1320px] items-center justify-between px-6 lg:px-10">
+        <Logo />
 
-        <div className="nav-links">
-          {links.map(link => (
-            <a key={link} href={`#${link.toLowerCase().replace(/ /g, '-')}`}>{link}</a>
+        <div className="hidden items-center gap-10 md:flex">
+          {links.map(([label, href]) => (
+            <a
+              key={href}
+              href={href}
+              className="relative py-2 text-[12px] font-medium tracking-[-0.01em] text-black/45 transition hover:text-black"
+            >
+              {label}
+              <span className="absolute inset-x-0 bottom-0 mx-auto h-px w-0 bg-[#6D28D9] transition-all duration-300 hover:w-full" />
+            </a>
           ))}
         </div>
 
-        <div className="nav-actions">
-          <Link href="/auth/signup" className="nav-cta">
-            Start free <Arrow />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/auth/signup"
+            className="hidden items-center gap-2 rounded-full bg-[#111111] px-5 py-2.5 text-[11px] font-semibold text-white shadow-[0_8px_22px_rgba(17,17,17,0.11)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#6D28D9] hover:shadow-[0_12px_28px_rgba(109,40,217,0.18)] md:flex"
+          >
+            Start free
+            <Arrow />
           </Link>
-          <button className={`menu-button ${open ? 'is-open' : ''}`} onClick={() => setOpen(v => !v)}
-            aria-label="Toggle menu" aria-expanded={open}>
-            <i /><i /><i />
+
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="rounded-full p-2 md:hidden"
+            aria-label="Toggle menu"
+            aria-expanded={open}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-      </nav>
-
-      <div className={`mobile-menu ${open ? 'open' : ''}`}>
-        {links.map(link => (
-          <a key={link} href={`#${link.toLowerCase().replace(/ /g, '-')}`} onClick={() => setOpen(false)}>
-            {link}<Arrow dark />
-          </a>
-        ))}
-        <Link href="/auth/signup" onClick={() => setOpen(false)} className="mobile-cta">
-          Start free — 30 days <Arrow />
-        </Link>
       </div>
-    </>
+
+      {open && (
+        <div className="border-t border-black/[0.055] bg-white px-6 py-5 md:hidden">
+          <div className="mx-auto flex max-w-[1320px] flex-col">
+            {links.map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                onClick={() => setOpen(false)}
+                className="border-b border-black/[0.06] py-4 text-sm font-medium"
+              >
+                {label}
+              </a>
+            ))}
+
+            <Link
+              href="/auth/signup"
+              onClick={() => setOpen(false)}
+              className="mt-4 flex items-center justify-center gap-2 rounded-full bg-[#111111] px-5 py-3.5 text-sm font-semibold text-white"
+            >
+              Start 7-day free trial
+              <Arrow />
+            </Link>
+          </div>
+        </div>
+      )}
+    </nav>
   )
 }
 
-function Hero() {
-  const [active, setActive] = useState(0)
-
-  const notifications = [
-    { from: 'Tosin · Operations', subject: 'Rice order approval', time: 'Just now', text: 'Need approval on the rice order before Friday.' },
-    { from: 'Ada · Finance', subject: 'Q3 vendor invoice', time: '2m ago', text: 'Can you confirm the revised payment schedule?' },
-    { from: 'Kelechi · Projects', subject: 'Site update', time: '5m ago', text: 'The client has approved the next phase.' },
+function HeroTextSequence() {
+  const messages = [
+    {
+      from: 'Operations',
+      text: 'Can we approve the order before Friday?',
+      response: 'Approved. Please proceed with the order.',
+    },
+    {
+      from: 'Finance',
+      text: 'Can you confirm the revised payment schedule?',
+      response: 'Yes. The revised schedule works. Please proceed.',
+    },
+    {
+      from: 'Projects',
+      text: 'The client has approved the next phase.',
+      response: 'Great. Proceed with the next phase.',
+    },
   ]
+
+  const [index, setIndex] = useState(0)
+  const [showResponse, setShowResponse] = useState(false)
 
   useEffect(() => {
-    const id = window.setInterval(() => setActive(v => (v + 1) % notifications.length), 3800)
-    return () => window.clearInterval(id)
-  }, [notifications.length])
+    let responseTimer: number
+    const cycle = window.setInterval(() => {
+      setShowResponse(false)
+      responseTimer = window.setTimeout(() => {
+        setIndex((value) => (value + 1) % messages.length)
+        setShowResponse(true)
+      }, 500)
+    }, 4300)
 
-  const current = notifications[active]
+    responseTimer = window.setTimeout(() => setShowResponse(true), 900)
+
+    return () => {
+      window.clearInterval(cycle)
+      window.clearTimeout(responseTimer)
+    }
+  }, [messages.length])
+
+  const current = messages[index]
 
   return (
-    <section className="hero">
-      <div className="hero-grid" />
-      <div className="hero-glow hero-glow-one" />
-      <div className="hero-glow hero-glow-two" />
+    <div className="relative mx-auto mt-14 w-full max-w-[720px] sm:mt-16">
+      {/* Barely-visible atmospheric geometry */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[650px] w-[650px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#6D28D9]/[0.045]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[760px] -translate-x-1/2 -translate-y-1/2 rotate-[-13deg] rounded-[50%] border border-black/[0.035]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[390px] w-[660px] -translate-x-1/2 -translate-y-1/2 rotate-[19deg] rounded-[50%] border border-[#6D28D9]/[0.035]" />
 
-      <div className="hero-inner">
-        <div className="hero-copy">
-          <div className="hero-kicker">
-            <span className="live-dot" />
-            AI CHIEF OF STAFF
+      <div className="relative mx-auto max-w-[590px]">
+        {/* First thought / incoming message */}
+        <div
+          key={`incoming-${index}`}
+          className="relative z-10 mx-auto max-w-[520px] animate-[heroMessage_700ms_cubic-bezier(.2,.8,.2,1)_both]"
+        >
+          <div className="mb-3 flex items-center justify-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#6D28D9]" />
+            <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-black/30">
+              New internal message
+            </span>
           </div>
 
-          <h1>
-            Be everywhere.
-            <br />
-            <span>Miss nothing.</span>
-          </h1>
+          <div className="rounded-[24px] border border-black/[0.075] bg-white px-6 py-5 text-left shadow-[0_20px_55px_rgba(17,17,17,0.075)] sm:px-8 sm:py-6">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[11px] font-semibold text-[#111111]">
+                {current.from}
+              </span>
+              <span className="text-[9px] text-black/25">just now</span>
+            </div>
 
-          <p>
-            Haelo reads internal email, understands your company,
-            drafts the response and brings it to your WhatsApp.
-            You make the call.
-          </p>
-
-          <div className="hero-actions">
-            <MagneticButton href="/auth/signup">Start free — 30 days</MagneticButton>
-            <a className="outline-btn" href="https://wa.me/2349000000000"
-              target="_blank" rel="noopener noreferrer">
-              <WA size={16} color={T.green} /> Talk to us
-            </a>
-          </div>
-
-          <div className="trust-row">
-            <span><Check /> No credit card</span>
-            <span><Check /> Set up in 15 min</span>
-            <span><Check /> Cancel anytime</span>
+            <p className="mt-4 text-lg font-medium leading-[1.35] tracking-[-0.025em] text-[#202026] sm:text-[21px]">
+              “{current.text}”
+            </p>
           </div>
         </div>
 
-        <div className="hero-product">
-          <div className="product-orbit orbit-one" />
-          <div className="product-orbit orbit-two" />
-
-          <div className="whatsapp-card">
-            <div className="wa-top">
-              <div className="wa-avatar">H</div>
-              <div>
-                <strong>Haelo</strong>
-                <small>AI Chief of Staff · online</small>
-              </div>
-              <span className="wa-menu">•••</span>
+        {/* Response */}
+        {showResponse && (
+          <div
+            key={`response-${index}`}
+            className="relative z-20 mx-auto -mt-1 max-w-[490px] animate-[heroResponse_850ms_cubic-bezier(.16,1,.3,1)_both] sm:-mt-2"
+          >
+            <div className="mx-auto mb-3 flex items-center justify-center gap-2">
+              <Sparkles className="h-3 w-3 text-[#6D28D9]" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#6D28D9]">
+                Haelo understood
+              </span>
             </div>
 
-            <div className="wa-body">
-              <div className="date-pill">TODAY</div>
-              <div className="message-bubble">
-                <small>NEW INTERNAL EMAIL</small>
-                <strong>{current.subject}</strong>
-                <p>{current.text}</p>
-                <div className="message-from">
-                  <span>{current.from}</span>
-                  <span>{current.time}</span>
-                </div>
-              </div>
+            <div className="rounded-[24px] border border-[#6D28D9]/15 bg-[#111111] px-6 py-5 text-left shadow-[0_25px_70px_rgba(17,17,17,0.18)] sm:px-8 sm:py-6">
+              <p className="text-lg font-medium leading-[1.35] tracking-[-0.025em] text-white sm:text-[21px]">
+                “{current.response}”
+              </p>
 
-              <div className="draft-bubble">
-                <div className="draft-label"><span /> DRAFT REPLY</div>
-                <p>
-                  Approved — please proceed and send the invoice once
-                  the order is confirmed.
-                </p>
-                <div className="bubble-actions">
-                  <button>Approve</button>
-                  <button>Edit</button>
-                  <button>Skip</button>
+              <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
+                <div className="flex items-center gap-2 text-[9px] text-white/35">
+                  <ShieldCheck className="h-3.5 w-3.5 text-[#A78BFA]" />
+                  Grounded in your company context
                 </div>
-              </div>
-            </div>
 
-            <div className="wa-bottom">
-              <span>Haelo is waiting for your decision</span>
-              <i />
+                <span className="rounded-full bg-[#6D28D9]/20 px-2.5 py-1 text-[8px] font-semibold text-[#C4B5FD]">
+                  Ready
+                </span>
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="float-card float-card-one">
-            <span className="float-icon">✦</span>
-            <div><b>Context understood</b><small>Business Bible applied</small></div>
+        {/* Minimal floating signals */}
+        <div className="pointer-events-none absolute -left-8 top-[25%] hidden animate-[float_5s_ease-in-out_infinite] rounded-2xl border border-black/[0.06] bg-white/90 px-3.5 py-3 shadow-[0_15px_45px_rgba(17,17,17,0.07)] backdrop-blur-md lg:block">
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#F4EEFF] text-[#6D28D9]">
+              <Layers3 className="h-3.5 w-3.5" />
+            </div>
+            <div>
+              <div className="text-[9px] font-semibold">Context applied</div>
+              <div className="mt-0.5 text-[8px] text-black/30">Business Bible</div>
+            </div>
           </div>
-          <div className="float-card float-card-two">
-            <span className="pulse-check">✓</span>
-            <div><b>One tap</b><small>Reply sent securely</small></div>
+        </div>
+
+        <div className="pointer-events-none absolute -right-8 bottom-[12%] hidden animate-[float_6s_ease-in-out_infinite_reverse] rounded-2xl border border-black/[0.06] bg-white/90 px-3.5 py-3 shadow-[0_15px_45px_rgba(17,17,17,0.07)] backdrop-blur-md lg:block">
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#111111] text-white">
+              <Zap className="h-3.5 w-3.5" />
+            </div>
+            <div>
+              <div className="text-[9px] font-semibold">Decision ready</div>
+              <div className="mt-0.5 text-[8px] text-black/30">You stay in control</div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="scroll-cue">
-        <span>SCROLL TO EXPLORE</span>
-        <i />
-      </div>
-    </section>
-  )
-}
-
-function FlowStrip() {
-  const { ref, visible } = useReveal()
-  const steps = [
-    ['01', 'Email arrives', 'Tosin · Operations', 'Need approval on the rice order.'],
-    ['02', 'Haelo understands', 'Business Bible', 'Context, tone and policy applied.'],
-    ['03', 'You decide', 'WhatsApp', 'Approve. Edit. Or skip.'],
-  ]
-
-  return (
-    <div ref={ref} className={`flow-strip reveal ${visible ? 'visible' : ''}`}>
-      {steps.map((step, i) => (
-        <div className="flow-step" key={step[0]}>
-          <span className="flow-number">{step[0]}</span>
-          <div>
-            <small>{step[1]}</small>
-            <strong>{step[2]}</strong>
-            <p>{step[3]}</p>
-          </div>
-          {i < 2 && <span className="flow-arrow"><Arrow dark /></span>}
-        </div>
-      ))}
     </div>
   )
 }
 
-function Ledger() {
-  const { ref, visible } = useReveal()
-  const items = [
-    ['<60s', 'From an email landing to a drafted reply on your WhatsApp.'],
-    ['1 tap', 'Approve, edit or skip without opening another app.'],
-    ['24/7', 'Your internal inbox watched while you focus elsewhere.'],
-  ]
-
+function Hero() {
   return (
-    <section className="ledger">
-      <div ref={ref} className={`ledger-inner reveal ${visible ? 'visible' : ''}`}>
-        {items.map(([big, text], i) => (
-          <div className="ledger-item" key={big}>
-            <span className="ledger-index">0{i + 1}</span>
-            <strong>{big}</strong>
-            <p>{text}</p>
-          </div>
-        ))}
+    <section className="relative min-h-screen overflow-hidden bg-[#FCFCFB] px-5 pb-16 pt-28 sm:px-6 sm:pt-32 lg:px-8">
+      {/* ============================================================
+          ATMOSPHERE
+      ============================================================ */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Main violet light */}
+        <div
+          className="absolute left-1/2 top-[-280px] h-[760px] w-[760px] -translate-x-1/2 rounded-full blur-[140px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(109,40,217,0.105) 0%, rgba(139,92,246,0.055) 28%, rgba(255,255,255,0) 70%)",
+          }}
+        />
+
+        {/* Green WhatsApp atmosphere */}
+        <div
+          className="absolute right-[-300px] top-[38%] h-[700px] w-[700px] rounded-full blur-[150px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(37,211,102,0.055) 0%, rgba(37,211,102,0.015) 35%, transparent 70%)",
+          }}
+        />
+
+        {/* Bottom violet atmosphere */}
+        <div
+          className="absolute bottom-[-300px] left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full blur-[150px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(109,40,217,0.055), transparent 68%)",
+          }}
+        />
+
+        {/* Editorial grid */}
+        <div
+          className="absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(17,17,17,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(17,17,17,0.035) 1px, transparent 1px)",
+            backgroundSize: "100px 100px",
+            maskImage:
+              "linear-gradient(to bottom, black 0%, black 45%, transparent 82%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, black 0%, black 45%, transparent 82%)",
+          }}
+        />
+
+        {/* Fine horizontal light */}
+        <div className="absolute left-0 right-0 top-[92px] h-px bg-gradient-to-r from-transparent via-black/[0.055] to-transparent" />
       </div>
+
+      {/* ============================================================
+          CONTENT
+      ============================================================ */}
+      <div className="relative z-10 mx-auto max-w-[1440px]">
+        <div className="mx-auto max-w-[1000px] text-center">
+          {/* Small brand signal */}
+          <div className="hero-reveal inline-flex items-center gap-2.5 rounded-full border border-black/[0.07] bg-white/70 px-3.5 py-2 shadow-[0_8px_35px_rgba(17,17,17,0.035)] backdrop-blur-xl">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inset-0 animate-ping rounded-full bg-[#6D28D9] opacity-30" />
+              <span className="relative h-2 w-2 rounded-full bg-[#6D28D9]" />
+            </span>
+
+            <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-black/45">
+              Intelligence for the work behind your inbox
+            </span>
+          </div>
+
+          {/* ========================================================
+              HEADLINE
+          ======================================================== */}
+          <h1 className="hero-reveal hero-reveal-1 mt-7 font-[var(--font-jakarta)] text-[clamp(3.4rem,8.5vw,8rem)] font-semibold leading-[0.86] tracking-[-0.09em] text-[#0D0D0E]">
+            Your inbox is full.
+            <br />
+
+            <span className="font-[var(--font-instrument)] font-normal italic tracking-[-0.055em] text-[#6D28D9]">
+              Your mind doesn't have to be.
+            </span>
+          </h1>
+
+          <p className="hero-reveal hero-reveal-2 mx-auto mt-8 max-w-[610px] text-[14px] leading-7 tracking-[-0.01em] text-[#707078] sm:text-[16px] sm:leading-8">
+            Haelo understands the emails that matter, remembers your business
+            context, and turns conversations into decisions you can approve.
+          </p>
+
+          {/* ========================================================
+              CTA
+          ======================================================== */}
+          <div className="hero-reveal hero-reveal-3 mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/auth/signup"
+              className="group relative flex h-[52px] items-center gap-2 overflow-hidden rounded-full bg-[#111111] px-7 text-[11px] font-semibold text-white shadow-[0_18px_45px_rgba(17,17,17,0.14)] transition-all duration-500 hover:-translate-y-1 hover:bg-[#6D28D9] hover:shadow-[0_22px_55px_rgba(109,40,217,0.2)]"
+            >
+              <span className="relative z-10">Start 7-day free trial</span>
+
+              <Arrow className="relative z-10 transition-transform duration-300 group-hover:translate-x-1" />
+
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.12] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            </Link>
+
+            <a
+              href="#how-it-works"
+              className="flex h-[52px] items-center gap-2 rounded-full border border-black/[0.08] bg-white/70 px-7 text-[11px] font-semibold text-[#222] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-black/[0.15] hover:bg-white"
+            >
+              See how Haelo works
+              <ChevronDown className="h-3.5 w-3.5" />
+            </a>
+          </div>
+
+          <div className="hero-reveal hero-reveal-4 mt-5 flex items-center justify-center gap-5 text-[9px] font-medium text-black/30">
+            <span>7 days free</span>
+            <span className="h-1 w-1 rounded-full bg-black/15" />
+            <span>No credit card</span>
+            <span className="h-1 w-1 rounded-full bg-black/15" />
+            <span>Cancel anytime</span>
+          </div>
+        </div>
+
+        {/* ============================================================
+            THE HERO ARTWORK
+        ============================================================ */}
+        <div className="relative mx-auto mt-20 h-[560px] max-w-[1180px] sm:mt-24 lg:h-[610px]">
+          <HeroConversationArtwork />
+        </div>
+      </div>
+
+      {/* ============================================================
+          ANIMATION
+      ============================================================ */}
+      <style jsx global>{`
+        @keyframes heroReveal {
+          from {
+            opacity: 0;
+            transform: translateY(24px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes artworkReveal {
+          from {
+            opacity: 0;
+            transform: perspective(1600px) rotateX(7deg) translateY(35px)
+              scale(0.96);
+          }
+
+          to {
+            opacity: 1;
+            transform: perspective(1600px) rotateX(0deg) translateY(0)
+              scale(1);
+          }
+        }
+
+        @keyframes orbit {
+          from {
+            transform: rotate(0deg) translateX(175px) rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg) translateX(175px) rotate(-360deg);
+          }
+        }
+
+        @keyframes signal {
+          0% {
+            opacity: 0;
+            transform: scale(0.7);
+          }
+
+          35% {
+            opacity: 1;
+          }
+
+          100% {
+            opacity: 0;
+            transform: scale(1.5);
+          }
+        }
+
+        @keyframes pulseRing {
+          0% {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+
+          40% {
+            opacity: 0.5;
+          }
+
+          100% {
+            transform: scale(1.6);
+            opacity: 0;
+          }
+        }
+
+        @keyframes messageIn {
+          from {
+            opacity: 0;
+            transform: translateY(14px) scale(0.98);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-120%);
+          }
+
+          100% {
+            transform: translateX(120%);
+          }
+        }
+
+        .hero-reveal {
+          animation: heroReveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .hero-reveal-1 {
+          animation-delay: 0.08s;
+        }
+
+        .hero-reveal-2 {
+          animation-delay: 0.16s;
+        }
+
+        .hero-reveal-3 {
+          animation-delay: 0.24s;
+        }
+
+        .hero-reveal-4 {
+          animation-delay: 0.32s;
+        }
+
+        .artwork-reveal {
+          animation: artworkReveal 1.2s 0.35s
+            cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .orbit-dot {
+          animation: orbit 12s linear infinite;
+        }
+
+        .signal-pulse {
+          animation: signal 3.2s ease-out infinite;
+        }
+
+        .signal-pulse-2 {
+          animation: signal 3.2s 1.1s ease-out infinite;
+        }
+
+        .signal-pulse-3 {
+          animation: signal 3.2s 2.2s ease-out infinite;
+        }
+
+        .ring-pulse {
+          animation: pulseRing 3s ease-out infinite;
+        }
+
+        .message-in {
+          animation: messageIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .message-delay-1 {
+          animation-delay: 0.8s;
+        }
+
+        .message-delay-2 {
+          animation-delay: 1.5s;
+        }
+
+        .message-delay-3 {
+          animation-delay: 2.2s;
+        }
+
+        .message-delay-4 {
+          animation-delay: 3s;
+        }
+
+        .shimmer-line {
+          animation: shimmer 4s ease-in-out infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .hero-reveal,
+          .artwork-reveal,
+          .orbit-dot,
+          .signal-pulse,
+          .signal-pulse-2,
+          .signal-pulse-3,
+          .ring-pulse,
+          .message-in,
+          .shimmer-line {
+            animation: none !important;
+          }
+        }
+      `}</style>
     </section>
   )
 }
 
-function HowItWorks() {
-  const { ref, visible } = useReveal()
-  const steps = [
-    { n: '01', title: 'Email arrives', body: 'A staff member emails your company address. Haelo sees it the moment it lands.' },
-    { n: '02', title: 'Context is applied', body: 'Your Business Bible tells Haelo who people are and how your company handles situations like this.' },
-    { n: '03', title: 'A decision reaches you', body: 'A clean WhatsApp card shows who sent it, what they need and a reply ready to review.' },
-    { n: '04', title: 'You stay in control', body: 'Approve as-is, ask for a change or skip it. Nothing is sent until you say so.' },
+
+/* ================================================================
+   HERO ARTWORK
+   ================================================================ */
+
+function HeroConversationArtwork() {
+  const [conversationStage, setConversationStage] = useState(0)
+
+  useEffect(() => {
+    const timers = [
+      window.setTimeout(() => setConversationStage(1), 900),
+      window.setTimeout(() => setConversationStage(2), 1800),
+      window.setTimeout(() => setConversationStage(3), 2900),
+      window.setTimeout(() => setConversationStage(4), 4100),
+    ]
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [])
+
+  return (
+    <div className="artwork-reveal relative h-full w-full">
+      {/* ==========================================================
+          ORBITAL SYSTEM
+      ========================================================== */}
+
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 sm:h-[620px] sm:w-[620px]">
+        {/* Outer halo */}
+        <div className="absolute inset-0 rounded-full border border-[#6D28D9]/[0.055]" />
+
+        <div className="absolute inset-[8%] rounded-full border border-[#6D28D9]/[0.045]" />
+
+        <div className="absolute inset-[18%] rounded-full border border-[#6D28D9]/[0.04]" />
+
+        {/* Orbit */}
+        <div className="absolute left-1/2 top-1/2 h-0 w-0">
+          <div className="orbit-dot absolute left-0 top-0 h-2 w-2">
+            <div className="h-2 w-2 rounded-full bg-[#6D28D9] shadow-[0_0_18px_rgba(109,40,217,0.55)]" />
+          </div>
+        </div>
+
+        {/* Pulsing signal nodes */}
+        <div className="signal-pulse absolute left-[17%] top-[30%] h-2 w-2 rounded-full bg-[#6D28D9]/50" />
+        <div className="signal-pulse-2 absolute right-[15%] top-[55%] h-2 w-2 rounded-full bg-[#25D366]/60" />
+        <div className="signal-pulse-3 absolute bottom-[19%] left-[38%] h-2 w-2 rounded-full bg-[#6D28D9]/40" />
+      </div>
+
+      {/* ==========================================================
+          INCOMING EMAIL — LEFT
+      ========================================================== */}
+
+      <div className="absolute left-0 top-[12%] hidden w-[250px] lg:block">
+        <div className="relative rotate-[-5deg] rounded-[22px] border border-black/[0.07] bg-white/80 p-4 shadow-[0_25px_70px_rgba(17,17,17,0.07)] backdrop-blur-xl">
+          {/* accent line */}
+          <div className="absolute left-0 top-6 h-9 w-[2px] rounded-r-full bg-[#6D28D9]" />
+
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F1ECFF] text-[10px] font-bold text-[#6D28D9]">
+              AC
+            </div>
+
+            <div className="min-w-0 text-left">
+              <div className="text-[10px] font-semibold text-[#171719]">
+                Amara Consulting
+              </div>
+
+              <div className="mt-0.5 text-[8px] text-black/35">
+                Following up on invoice
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-1.5">
+            <div className="h-1.5 w-[92%] rounded-full bg-black/[0.06]" />
+            <div className="h-1.5 w-[78%] rounded-full bg-black/[0.05]" />
+            <div className="h-1.5 w-[61%] rounded-full bg-black/[0.04]" />
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-[8px] font-medium text-black/30">
+              Email received
+            </span>
+
+            <span className="text-[8px] text-black/25">9:42 AM</span>
+          </div>
+
+          {/* connection line */}
+          <div className="absolute -right-[120px] top-1/2 h-px w-[120px] rotate-[8deg] bg-gradient-to-r from-black/[0.05] to-[#6D28D9]/20" />
+
+          <div className="absolute -right-[126px] top-[52%] h-1.5 w-1.5 rounded-full bg-[#6D28D9]" />
+        </div>
+      </div>
+
+      {/* ==========================================================
+          HAELO CORE
+      ========================================================== */}
+
+      <div className="absolute left-1/2 top-[8%] z-20 -translate-x-1/2">
+        <div className="relative flex flex-col items-center">
+          {/* expanding ring */}
+          <div className="ring-pulse absolute h-[80px] w-[80px] rounded-full border border-[#6D28D9]/20" />
+
+          {/* core */}
+          <div className="relative flex h-[58px] w-[58px] items-center justify-center rounded-full border border-white bg-[#111111] shadow-[0_15px_45px_rgba(17,17,17,0.2),0_0_45px_rgba(109,40,217,0.12)]">
+            <div className="absolute inset-[5px] rounded-full border border-white/[0.08]" />
+
+            <span className="font-[var(--font-jakarta)] text-[14px] font-bold tracking-[-0.04em] text-white">
+              H
+            </span>
+
+            <span className="absolute bottom-[10px] right-[11px] h-1.5 w-1.5 rounded-full bg-[#A78BFA] shadow-[0_0_10px_rgba(167,139,250,0.9)]" />
+          </div>
+
+          <div className="mt-3 rounded-full border border-black/[0.06] bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-xl">
+            <span className="text-[8px] font-semibold uppercase tracking-[0.18em] text-black/40">
+              Haelo understands
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ==========================================================
+          MAIN WHATSAPP CONVERSATION
+      ========================================================== */}
+
+      <div className="absolute left-1/2 top-[18%] z-10 w-[92%] max-w-[590px] -translate-x-1/2 sm:w-[560px]">
+        {/* Shadow plane */}
+        <div className="absolute -inset-5 rounded-[40px] bg-[#6D28D9]/[0.025] blur-2xl" />
+
+        {/* Main shell */}
+        <div
+          className="relative overflow-hidden rounded-[30px] border border-black/[0.09] bg-white shadow-[0_45px_110px_rgba(17,17,17,0.12),0_12px_35px_rgba(17,17,17,0.06)]"
+          style={{
+            transform:
+              "perspective(1600px) rotateX(1deg) rotateY(-1.5deg)",
+          }}
+        >
+          {/* top browser-like hairline */}
+          <div className="flex h-[36px] items-center justify-between border-b border-black/[0.05] bg-white px-4">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-black/[0.08]" />
+              <span className="h-2 w-2 rounded-full bg-black/[0.08]" />
+              <span className="h-2 w-2 rounded-full bg-black/[0.08]" />
+            </div>
+
+            <div className="rounded-full bg-black/[0.025] px-3 py-1">
+              <span className="text-[7px] font-medium tracking-[0.12em] text-black/25">
+                HAELO / CONVERSATION
+              </span>
+            </div>
+
+            <div className="w-10" />
+          </div>
+
+          {/* WhatsApp header */}
+          <div className="relative flex h-[70px] items-center gap-3 bg-[#075E54] px-5">
+            {/* subtle green light */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#075E54] via-[#087F70] to-[#075E54] opacity-60" />
+
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#6D28D9] text-[10px] font-bold text-white shadow-lg">
+              H
+            </div>
+
+            <div className="relative flex-1 text-left">
+              <div className="text-[12px] font-semibold text-white">
+                Haelo
+              </div>
+
+              <div className="mt-0.5 flex items-center gap-1.5 text-[8px] text-white/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#25D366]" />
+                online
+              </div>
+            </div>
+
+            <div className="relative flex items-center gap-4 text-white/60">
+              <div className="h-3.5 w-3.5 rounded-full border border-current" />
+              <div className="flex flex-col gap-[3px]">
+                <span className="h-1 w-1 rounded-full bg-current" />
+                <span className="h-1 w-1 rounded-full bg-current" />
+                <span className="h-1 w-1 rounded-full bg-current" />
+              </div>
+            </div>
+          </div>
+
+          {/* Chat */}
+          <div className="relative min-h-[365px] overflow-hidden bg-[#efeae2] px-4 py-5 sm:px-7">
+            {/* wallpaper */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.2]"
+              style={{
+                backgroundImage: `
+                  radial-gradient(circle at 15px 15px, rgba(80,70,60,.12) 1px, transparent 1px),
+                  radial-gradient(circle at 60px 60px, rgba(80,70,60,.08) 1px, transparent 1px)
+                `,
+                backgroundSize: "75px 75px",
+              }}
+            />
+
+            {/* light gradient */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.1] via-transparent to-black/[0.015]" />
+
+            <div className="relative z-10 flex flex-col gap-3">
+              <div className="mx-auto rounded-lg bg-white/80 px-3 py-1 text-[7px] font-semibold uppercase tracking-[0.15em] text-[#667781] shadow-sm">
+                Today
+              </div>
+
+              {/* Incoming message */}
+              {conversationStage >= 1 && (
+                <div className="message-in flex justify-start">
+                  <div className="max-w-[78%] rounded-[4px_15px_15px_15px] bg-white px-4 py-3 text-left shadow-[0_1px_1px_rgba(0,0,0,.08)]">
+                    <div className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#6D28D9]">
+                      New email
+                    </div>
+
+                    <div className="text-[11px] font-semibold leading-5 text-[#111B21]">
+                      Amara Consulting just emailed you
+                    </div>
+
+                    <div className="mt-1.5 text-[10px] leading-[1.6] text-[#4D5559]">
+                      They&apos;re following up on the invoice we discussed and
+                      asking for confirmation before month-end.
+                    </div>
+
+                    <div className="mt-1.5 text-right text-[7px] text-[#8696A0]">
+                      9:42 AM
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Haelo understanding */}
+              {conversationStage >= 2 && (
+                <div className="message-in message-delay-1 flex justify-start">
+                  <div className="max-w-[82%] rounded-[4px_15px_15px_15px] border border-[#6D28D9]/10 bg-[#F7F3FF] px-4 py-3 text-left shadow-[0_4px_15px_rgba(109,40,217,.06)]">
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6D28D9] text-[7px] font-bold text-white">
+                        H
+                      </div>
+
+                      <span className="text-[7px] font-bold uppercase tracking-[0.13em] text-[#6D28D9]">
+                        Context understood
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] leading-[1.65] text-[#34343A]">
+                      This is a straightforward confirmation. I&apos;ve
+                      prepared a response in your usual professional tone.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Prepared response */}
+              {conversationStage >= 3 && (
+                <div className="message-in message-delay-2 flex justify-start">
+                  <div className="max-w-[84%] rounded-[4px_15px_15px_15px] bg-white px-4 py-3 text-left shadow-[0_2px_8px_rgba(0,0,0,.07)]">
+                    <div className="mb-1.5 flex items-center justify-between gap-5">
+                      <span className="text-[7px] font-bold uppercase tracking-[0.13em] text-[#6D28D9]">
+                        Prepared reply
+                      </span>
+
+                      <span className="text-[7px] text-[#8696A0]">
+                        9:42 AM
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] leading-[1.7] text-[#303438]">
+                      Hi team, confirming the invoice looks good on our end —
+                      happy to proceed. Let me know if you need anything else
+                      before month-end.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Decision */}
+              {conversationStage >= 4 && (
+                <div className="message-in message-delay-3 flex justify-start">
+                  <div className="w-full max-w-[430px] rounded-[17px] border border-black/[0.055] bg-white p-3 shadow-[0_5px_20px_rgba(0,0,0,.07)]">
+                    <div className="mb-2 px-1 text-[8px] font-medium text-[#667781]">
+                      Ready when you are.
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <button
+                        type="button"
+                        className="rounded-xl bg-[#6D28D9] py-2.5 text-[8px] font-semibold text-white transition hover:bg-[#5B21B6]"
+                      >
+                        Send it
+                      </button>
+
+                      <button
+                        type="button"
+                        className="rounded-xl border border-black/[0.06] bg-[#F7F7F7] py-2.5 text-[8px] font-semibold text-[#303438]"
+                      >
+                        Let me edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className="rounded-xl border border-black/[0.06] bg-[#F7F7F7] py-2.5 text-[8px] font-semibold text-[#303438]"
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Input */}
+          <div className="flex items-center gap-2 border-t border-black/[0.05] bg-[#F0F2F5] px-3 py-3">
+            <div className="h-8 w-8 rounded-full bg-white" />
+
+            <div className="flex h-8 flex-1 items-center rounded-full bg-white px-4 text-[8px] text-[#8696A0]">
+              Message Haelo
+            </div>
+
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#075E54] text-white">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M22 2 11 13" />
+                <path d="m22 2-7 20-4-9-9-4Z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================
+            MOVING LIGHT ACROSS THE PRODUCT
+        ======================================================== */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[30px]">
+          <div className="shimmer-line absolute left-0 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/[0.12] to-transparent blur-xl" />
+        </div>
+      </div>
+
+      {/* ==========================================================
+          RIGHT-SIDE DECISION LABEL
+      ========================================================== */}
+
+      <div className="absolute right-0 top-[39%] hidden w-[210px] lg:block">
+        <div className="relative rounded-[20px] border border-black/[0.06] bg-white/80 p-4 shadow-[0_20px_55px_rgba(17,17,17,.07)] backdrop-blur-xl">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-black/30">
+              Next action
+            </span>
+
+            <span className="h-1.5 w-1.5 rounded-full bg-[#25D366]" />
+          </div>
+
+          <div className="text-[11px] font-semibold tracking-[-0.02em] text-[#18181A]">
+            Approve invoice
+          </div>
+
+          <div className="mt-1 text-[8px] leading-5 text-black/35">
+            Prepared from the conversation and your existing context.
+          </div>
+
+          <div className="mt-3 h-px bg-black/[0.05]" />
+
+          <div className="mt-3 flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#F1ECFF] text-[7px] font-bold text-[#6D28D9]">
+              H
+            </span>
+
+            <span className="text-[8px] font-medium text-black/45">
+              Haelo prepared this
+            </span>
+          </div>
+
+          {/* connector */}
+          <div className="absolute -left-[100px] top-1/2 h-px w-[100px] bg-gradient-to-r from-transparent to-[#6D28D9]/20" />
+
+          <div className="absolute -left-[105px] top-[49%] h-1.5 w-1.5 rounded-full bg-[#6D28D9]" />
+        </div>
+      </div>
+
+      {/* ==========================================================
+          BOTTOM MICRO STAT
+      ========================================================== */}
+
+      <div className="absolute bottom-[5%] left-1/2 -translate-x-1/2 text-center">
+        <div className="flex items-center justify-center gap-3">
+          <span className="h-px w-8 bg-black/[0.08]" />
+
+          <span className="text-[8px] font-semibold uppercase tracking-[0.22em] text-black/25">
+            Read · Understand · Prepare · Decide
+          </span>
+
+          <span className="h-px w-8 bg-black/[0.08]" />
+        </div>
+      </div>
+    </div>
+  )
+}
+function Metrics() {
+  const metrics = [
+    {
+      value: "<60s",
+      label: "Email to prepared response",
+      detail: "Haelo reads the context and prepares the next move.",
+    },
+    {
+      value: "1 tap",
+      label: "Approve, edit or skip",
+      detail: "You stay in control without writing the response yourself.",
+    },
+    {
+      value: "24/7",
+      label: "Your inbox stays watched",
+      detail: "Important conversations don't have to wait for you.",
+    },
   ]
 
   return (
-    <section id="how-it-works" className="section cream-section">
-      <div className="section-shell">
-        <Eyebrow>How it works</Eyebrow>
-        <div className="section-heading split-heading">
-          <h2>Four steps.<br /><em>Zero inbox anxiety.</em></h2>
-          <p>Designed around the way busy executives already work — not another dashboard demanding your attention.</p>
-        </div>
+    <section className="relative overflow-hidden bg-[#0B0B0D] text-white">
+      {/* ============================================================
+          ATMOSPHERE
+      ============================================================ */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* Central violet glow */}
+        <div
+          className="absolute left-1/2 top-1/2 h-[520px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[150px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(109,40,217,0.12) 0%, rgba(109,40,217,0.035) 38%, transparent 70%)",
+          }}
+        />
 
-        <div ref={ref} className={`steps-grid reveal ${visible ? 'visible' : ''}`}>
-          {steps.map((s, i) => (
-            <div className="step-card" key={s.n}>
-              <div className="step-top">
-                <span>{s.n}</span>
-                <i />
+        {/* Left atmospheric light */}
+        <div
+          className="absolute -left-[250px] top-1/2 h-[500px] w-[500px] -translate-y-1/2 rounded-full blur-[130px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(167,139,250,0.055), transparent 70%)",
+          }}
+        />
+
+        {/* Right atmospheric light */}
+        <div
+          className="absolute -right-[250px] top-1/2 h-[500px] w-[500px] -translate-y-1/2 rounded-full blur-[130px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(37,211,102,0.025), transparent 70%)",
+          }}
+        />
+
+        {/* Fine grid */}
+        <div
+          className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px)",
+            backgroundSize: "90px 90px",
+            maskImage:
+              "linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)",
+          }}
+        />
+      </div>
+
+      {/* ============================================================
+          TOP HAIRLINE
+      ============================================================ */}
+      <div className="relative h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
+
+      {/* ============================================================
+          CONTENT
+      ============================================================ */}
+      <div className="relative mx-auto max-w-[1320px]">
+        <div className="grid grid-cols-1 lg:grid-cols-3">
+          {metrics.map((metric, index) => (
+            <div
+              key={metric.value}
+              className={`
+                group relative overflow-hidden
+                px-7 py-12
+                sm:px-10 sm:py-14
+                lg:px-12 lg:py-16
+                ${index < 2 ? "border-b border-white/[0.07] lg:border-b-0 lg:border-r" : ""}
+              `}
+            >
+              {/* ====================================================
+                  HOVER LIGHT
+              ==================================================== */}
+              <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100">
+                <div
+                  className="absolute left-1/2 top-1/2 h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[90px]"
+                  style={{
+                    background:
+                      "radial-gradient(circle, rgba(109,40,217,0.10), transparent 70%)",
+                  }}
+                />
               </div>
-              <h3>{s.title}</h3>
-              <p>{s.body}</p>
-              <div className="step-line" />
-              <span className="step-arrow"><Arrow dark /></span>
+
+              {/* ====================================================
+                  INDEX
+              ==================================================== */}
+              <div className="relative mb-10 flex items-center justify-between">
+                <span className="font-[var(--font-jakarta)] text-[8px] font-semibold uppercase tracking-[0.2em] text-white/25">
+                  0{index + 1}
+                </span>
+
+                <span className="h-px w-10 bg-white/[0.08] transition-all duration-500 group-hover:w-16 group-hover:bg-[#8B5CF6]/40" />
+              </div>
+
+              {/* ====================================================
+                  VALUE
+              ==================================================== */}
+              <div className="relative">
+                <div className="font-[var(--font-instrument)] text-[clamp(4rem,7vw,6.5rem)] font-normal italic leading-[0.8] tracking-[-0.055em] text-[#D8CCFF] transition-transform duration-500 group-hover:-translate-y-1">
+                  {metric.value}
+                </div>
+
+                {/* Fine accent */}
+                <div className="mt-7 h-px w-8 bg-[#6D28D9]/70 transition-all duration-500 group-hover:w-14" />
+              </div>
+
+              {/* ====================================================
+                  LABEL
+              ==================================================== */}
+              <div className="relative mt-5">
+                <h3 className="font-[var(--font-jakarta)] text-[12px] font-semibold tracking-[-0.015em] text-white/90">
+                  {metric.label}
+                </h3>
+
+                <p className="mt-2 max-w-[260px] text-[10px] leading-[1.7] text-white/38">
+                  {metric.detail}
+                </p>
+              </div>
             </div>
           ))}
         </div>
+      </div>
 
-        <FlowStrip />
+      {/* ============================================================
+          BOTTOM HAIRLINE
+      ============================================================ */}
+      <div className="relative h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+    </section>
+  )
+}
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  center = false,
+}: {
+  eyebrow: string
+  title: React.ReactNode
+  description?: string
+  center?: boolean
+}) {
+  return (
+    <div className={`mb-14 max-w-2xl ${center ? 'mx-auto text-center' : ''}`}>
+      <div
+        className={`mb-5 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#6D28D9] ${
+          center ? 'justify-center' : ''
+        }`}
+      >
+        <span className="h-px w-6 bg-[#6D28D9]" />
+        {eyebrow}
+        {center && <span className="h-px w-6 bg-[#6D28D9]" />}
+      </div>
+
+      <h2 className="font-[var(--font-jakarta)] text-4xl font-semibold leading-[0.98] tracking-[-0.065em] text-[#111111] sm:text-5xl lg:text-[60px]">
+        {title}
+      </h2>
+
+      {description && (
+        <p
+          className={`mt-5 max-w-xl text-sm leading-7 text-[#73737D] sm:text-[15px] ${
+            center ? 'mx-auto' : ''
+          }`}
+        >
+          {description}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function HowItWorks() {
+  const steps = [
+    {
+      n: '01',
+      icon: Inbox,
+      title: 'Email arrives',
+      body: 'Haelo watches your company inbox and sees the message the moment it lands.',
+    },
+    {
+      n: '02',
+      icon: Layers3,
+      title: 'Context appears',
+      body: 'Your Business Bible supplies the people, policies and tone behind the request.',
+    },
+    {
+      n: '03',
+      icon: Sparkles,
+      title: 'A response forms',
+      body: 'Haelo turns that context into a clear, grounded response ready for review.',
+    },
+    {
+      n: '04',
+      icon: Check,
+      title: 'You decide',
+      body: 'Approve, edit or skip. Nothing is sent without your say-so.',
+    },
+  ]
+
+  return (
+    <section id="how-it-works" className="bg-[#FAF9FC] px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+      <div className="mx-auto max-w-[1320px]">
+        <SectionHeading
+          eyebrow="How it works"
+          title={
+            <>
+              The complexity
+              <br />
+              <span className="font-[var(--font-instrument)] font-normal italic text-[#6D28D9]">
+                disappears.
+              </span>
+            </>
+          }
+          description="Haelo handles the work between an email arriving and a decision being made. You only see what needs you."
+        />
+
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[28px] border border-[#E7E4ED] bg-[#E7E4ED] md:grid-cols-2 lg:grid-cols-4">
+          {steps.map((step) => {
+            const Icon = step.icon
+
+            return (
+              <div
+                key={step.n}
+                className="group relative min-h-[330px] bg-white p-7 transition-all duration-500 hover:bg-[#FCFAFF] sm:p-8"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-semibold tracking-[0.15em] text-[#6D28D9]">
+                    {step.n}
+                  </span>
+
+                  <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-[#F6F3FA] text-[#6D28D9] transition-all duration-500 group-hover:scale-105 group-hover:bg-[#EFE7FF]">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                </div>
+
+                <div className="mt-16">
+                  <h3 className="text-[17px] font-semibold tracking-[-0.025em] text-[#111111]">
+                    {step.title}
+                  </h3>
+
+                  <p className="mt-3 text-[11px] leading-6 text-[#7A7A84]">
+                    {step.body}
+                  </p>
+                </div>
+
+                <div className="absolute bottom-8 left-8 h-px w-0 bg-[#6D28D9] transition-all duration-500 group-hover:w-20" />
+              </div>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
 }
 
 function Features() {
-  const { ref, visible } = useReveal()
   const features = [
-    ['01', 'Real-time email monitoring', 'A constant watch on your company domain.'],
+    ['01', 'Real-time email monitoring', 'A constant watch on your company inbox.'],
     ['02', 'The Business Bible', 'One source of truth for how your company responds.'],
-    ['03', 'WhatsApp-first', 'No new login, no new app. Decisions where you already are.'],
+    ['03', 'Context-aware drafting', 'Replies grounded in company knowledge and tone.'],
     ['04', 'Configurable timer', 'Auto-send, remind-and-wait, or a hybrid workflow.'],
     ['05', 'Staff directory', 'People recognised by name, role and department.'],
-    ['06', 'Activity log', 'Every email, draft and outcome, filterable and exportable.'],
-    ['07', 'Context-aware drafting', 'Replies grounded in company knowledge and tone.'],
-    ['08', 'Security by design', 'OAuth only. Encrypted in transit and at rest.'],
+    ['06', 'Shared team dashboard', 'A clear view of decisions, drafts and activity.'],
+    ['07', 'Activity log', 'Every email, draft and outcome in one place.'],
+    ['08', 'Security by design', 'OAuth and encryption built into the workflow.'],
   ]
 
   return (
-    <section id="features" className="section feature-section">
-      <div className="section-shell">
-        <div className="feature-intro">
-          <Eyebrow>Features</Eyebrow>
-          <h2>Everything it takes.<br /><em>Nothing it doesn’t.</em></h2>
-          <p>Eight pieces working as one system, built for people who have no time to waste on inbox administration.</p>
-          <div className="feature-stamp">BUILT FOR<br /><b>DECISION MAKERS</b></div>
-        </div>
+    <section id="features" className="bg-white px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+      <div className="mx-auto max-w-[1320px]">
+        <div className="grid gap-16 lg:grid-cols-[0.72fr_1.28fr] lg:gap-28">
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <SectionHeading
+              eyebrow="The system"
+              title={
+                <>
+                  Quietly
+                  <br />
+                  <span className="font-[var(--font-instrument)] font-normal italic text-[#6D28D9]">
+                    intelligent.
+                  </span>
+                </>
+              }
+              description="Everything Haelo needs to understand the work, without adding another system your team has to babysit."
+            />
 
-        <div ref={ref} className={`feature-list reveal ${visible ? 'visible' : ''}`}>
-          {features.map(([n, title, body], i) => (
-            <div className="feature-row" key={n}>
-              <span className="feature-number">{n}</span>
-              <div className="feature-copy">
-                <h3>{title}</h3>
-                <p>{body}</p>
+            <div className="hidden rounded-[22px] border border-[#E9E7EF] bg-[#FAF9FC] p-5 lg:block">
+              <div className="flex items-center gap-3">
+                <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#111111] text-white">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold text-[#111111]">
+                    Built for decision makers
+                  </div>
+                  <div className="mt-1 text-[9px] text-black/30">
+                    The detail stays behind the scenes.
+                  </div>
+                </div>
               </div>
-              <span className="feature-plus">+</span>
             </div>
-          ))}
+          </div>
+
+          <div className="divide-y divide-[#E9E7EF] border-y border-[#E9E7EF]">
+            {features.map(([number, title, body]) => (
+              <div
+                key={number}
+                className="group grid grid-cols-[35px_1fr_20px] gap-4 py-6 transition-all duration-300 hover:px-2 sm:grid-cols-[45px_1fr_20px]"
+              >
+                <span className="pt-1 text-[9px] font-semibold text-[#6D28D9]">
+                  {number}
+                </span>
+
+                <div>
+                  <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-[#111111] sm:text-[17px]">
+                    {title}
+                  </h3>
+                  <p className="mt-1.5 max-w-lg text-[11px] leading-6 text-[#7A7A84]">
+                    {body}
+                  </p>
+                </div>
+
+                <Arrow className="mt-1 text-black/15 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#6D28D9]" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -419,34 +1350,53 @@ function Features() {
 }
 
 function Integrations() {
-  const providers = ['Gmail', 'Outlook', 'Zoho Mail', 'WhatsApp Business', 'Google Drive']
+  const providers = ['Gmail', 'Outlook', 'Zoho Mail', 'Google Drive', 'More coming']
+
   return (
-    <section className="integrations">
-      <div className="integration-glow" />
-      <div className="integration-inner">
-        <Eyebrow light>Fits your stack</Eyebrow>
-        <h2>Your tools stay.<br /><span>Haelo connects them.</span></h2>
-        <div className="integration-list">
-          {providers.map((p, i) => (
-            <div className="integration-item" key={p}>
-              <span>0{i + 1}</span>
-              <strong>{p}</strong>
+    <section className="relative overflow-hidden bg-[#111111] px-5 py-24 text-white sm:px-6 lg:px-8 lg:py-32">
+      <div className="pointer-events-none absolute left-1/2 top-[-250px] h-[650px] w-[900px] -translate-x-1/2 rounded-full bg-[#6D28D9]/10 blur-[120px]" />
+
+      <div className="relative mx-auto max-w-[1320px]">
+        <SectionHeading
+          eyebrow="Fits your stack"
+          center
+          title={
+            <>
+              Your tools stay.
+              <br />
+              <span className="font-[var(--font-instrument)] font-normal italic text-[#C4B5FD]">
+                Haelo connects them.
+              </span>
+            </>
+          }
+          description="Bring Haelo into the systems your team already uses. No unnecessary workflow change."
+        />
+
+        <div className="mx-auto grid max-w-4xl grid-cols-2 overflow-hidden rounded-[26px] border border-white/10 sm:grid-cols-3 lg:grid-cols-5">
+          {providers.map((provider, index) => (
+            <div
+              key={provider}
+              className={`group flex min-h-[125px] flex-col items-center justify-center border-white/[0.08] p-6 text-center transition hover:bg-white/[0.035] ${
+                index < 4 ? 'border-b lg:border-b-0' : ''
+              } ${index % 2 === 0 ? 'border-r' : ''} ${
+                index === 2 ? 'sm:border-r' : ''
+              }`}
+            >
+              <span className="text-[8px] font-semibold tracking-[0.15em] text-white/15">
+                0{index + 1}
+              </span>
+              <span className="mt-3 text-[12px] font-medium text-white/60 transition group-hover:text-white">
+                {provider}
+              </span>
             </div>
           ))}
         </div>
-        <p className="integration-note">Slack and Zoho CRM arriving in Version 2.0</p>
       </div>
     </section>
   )
 }
 
-function PricingCalculator() {
-  const [seats, setSeats] = useState(3)
-  const { total, breakdown, isCustom } = computeBilling(seats)
-  const nextRate = seats < SELF_SERVE_MAX
-    ? TIERS.find(t => seats + 1 >= t.from && seats + 1 <= t.to)?.rate ?? null
-    : null
-
+function Pricing() {
   const included = [
     'Add as many inboxes as you need',
     'All email providers',
@@ -456,88 +1406,139 @@ function PricingCalculator() {
     'Priority support',
   ]
 
+  const plans = [
+    {
+      name: 'Individual',
+      description: 'For managing your inbox on your own.',
+      people: '1 person',
+      price: 15000,
+      icon: Users,
+    },
+    {
+      name: 'Team',
+      description: 'For teams working together from one workspace.',
+      people: '2–5 people',
+      price: 60000,
+      icon: Users,
+      popular: true,
+    },
+    {
+      name: 'Business',
+      description: 'For growing teams that need more room to scale.',
+      people: '6–15 people',
+      price: 195000,
+      icon: Building2,
+    },
+  ]
+
   return (
-    <div className="pricing-card">
-      <div className="calculator">
-        <div className="calculator-head">
-          <div>
-            <small>ESTIMATE YOUR BILL</small>
-            <h3>Built around your team.</h3>
-          </div>
-          <span className="live-price">LIVE</span>
-        </div>
+    <section id="pricing" className="bg-[#FAF9FC] px-5 py-24 sm:px-6 lg:px-8 lg:py-32">
+      <div className="mx-auto max-w-[1320px]">
+        <SectionHeading
+          eyebrow="Pricing"
+          center
+          title={
+            <>
+              Choose the space
+              <br />
+              <span className="font-[var(--font-instrument)] font-normal italic text-[#6D28D9]">
+                your team needs.
+              </span>
+            </>
+          }
+          description="Start with a 7-day free trial. Get full access and upgrade as your team grows."
+        />
 
-        <p className="calculator-copy">
-          Pay per inbox. The rate drops automatically as your team grows.
-        </p>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          {plans.map((plan) => {
+            const Icon = plan.icon
 
-        <div className="seat-control">
-          <div className="seat-label">
-            <span>Team members</span>
-            <strong>{seats}{seats >= SELF_SERVE_MAX ? '+' : ''}</strong>
-          </div>
-          <input type="range" min={1} max={16} value={seats}
-            onChange={e => setSeats(Number(e.target.value))} />
-          <div className="range-labels"><span>1</span><span>15+</span></div>
-        </div>
+            return (
+              <div
+                key={plan.name}
+                className={`relative flex min-h-[585px] flex-col rounded-[28px] bg-white p-7 transition-all duration-500 hover:-translate-y-1.5 sm:p-8 ${
+                  plan.popular
+                    ? 'border-[1.5px] border-[#6D28D9] shadow-[0_25px_70px_rgba(109,40,217,0.1)]'
+                    : 'border border-[#E7E5ED] shadow-[0_10px_35px_rgba(17,17,17,0.035)]'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#6D28D9] px-4 py-1.5 text-[8px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_8px_20px_rgba(109,40,217,0.2)]">
+                    Most popular
+                  </div>
+                )}
 
-        {isCustom ? (
-          <div className="custom-box">
-            <span>16+</span>
-            <div><strong>Custom pricing</strong><p>Dedicated onboarding and a rate suited to your organisation.</p></div>
-          </div>
-        ) : (
-          <div className="breakdown">
-            {breakdown.map(b => (
-              <div className="breakdown-row" key={b.label}>
-                <span>{b.label}<small>{formatNaira(b.rate)} / seat</small></span>
-                <strong>{formatNaira(b.subtotal)}</strong>
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-[13px] ${
+                      plan.popular
+                        ? 'bg-[#F1EAFF] text-[#6D28D9]'
+                        : 'bg-[#F5F3F8] text-[#29272F]'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-[17px] font-semibold tracking-[-0.025em] text-[#111111]">
+                      {plan.name}
+                    </h3>
+                    <p className="mt-1 max-w-[220px] text-[11px] leading-5 text-[#777781]">
+                      {plan.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-9 flex items-baseline gap-2">
+                  <strong className="text-[35px] font-semibold leading-none tracking-[-0.06em] text-[#111111]">
+                    {formatNaira(plan.price)}
+                  </strong>
+                  <span className="text-[10px] text-[#85858F]">/ month</span>
+                </div>
+
+                <div
+                  className={`mt-4 flex w-fit items-center gap-2 rounded-full px-3 py-1.5 ${
+                    plan.popular
+                      ? 'bg-[#F5F0FF] text-[#6D28D9]'
+                      : 'bg-[#F7F7F8] text-[#5F6069]'
+                  }`}
+                >
+                  <Users className="h-3 w-3" />
+                  <span className="text-[10px] font-semibold">
+                    {plan.people}
+                  </span>
+                </div>
+
+                <div className="my-7 h-px bg-[#EEEEF1]" />
+
+                <div>
+                  <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#9999A2]">
+                    Included
+                  </p>
+
+                  <div className="space-y-3">
+                    {included.map((item) => (
+                      <CheckItem key={item}>{item}</CheckItem>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-8">
+                  <Link
+                    href="/auth/signup"
+                    className="group flex w-full items-center justify-center gap-2 rounded-full bg-[#111111] px-5 py-3.5 text-[11px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#6D28D9] hover:shadow-[0_12px_28px_rgba(109,40,217,0.2)]"
+                  >
+                    Start 7-day free trial
+                    <Arrow className="transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+
+                  <p className="mt-3 text-center text-[9px] text-[#A0A0A8]">
+                    No credit card required
+                  </p>
+                </div>
               </div>
-            ))}
-            {nextRate !== null && breakdown.length && nextRate < breakdown[breakdown.length - 1].rate && (
-              <div className="rate-note">Add one more seat and the rate drops to {formatNaira(nextRate)}.</div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="price-summary">
-        <div>
-          <small>ESTIMATED MONTHLY TOTAL</small>
-          <div className="price-total">{isCustom ? 'Custom' : formatNaira(total)}</div>
-          {!isCustom && <p>per month · {seats} {seats === 1 ? 'seat' : 'seats'}</p>}
-        </div>
-
-        <div className="included-list">
-          {included.map(item => <div key={item}><Check />{item}</div>)}
-        </div>
-
-        {isCustom ? (
-          <a className="price-cta" href="https://wa.me/2349000000000?text=I'd%20like%20to%20talk%20about%20Enterprise%20pricing"
-            target="_blank" rel="noopener noreferrer">
-            <WA size={15} color={T.ink} /> Talk to us
-          </a>
-        ) : (
-          <Link href="/auth/signup" className="price-cta">Start free — 30 days <Arrow dark /></Link>
-        )}
-        <span className="price-footnote">No credit card required</span>
-      </div>
-    </div>
-  )
-}
-
-function Pricing() {
-  const { ref, visible } = useReveal(0.05)
-  return (
-    <section id="pricing" className="section cream-section pricing-section">
-      <div className="section-shell">
-        <Eyebrow>Pricing</Eyebrow>
-        <div className="section-heading">
-          <h2>Pay for people,<br /><em>not a plan size.</em></h2>
-          <p>First 30 days free. Cancel any time. All prices in Nigerian Naira.</p>
-        </div>
-        <div ref={ref} className={`reveal ${visible ? 'visible' : ''}`}>
-          <PricingCalculator />
+            )
+          })}
         </div>
       </div>
     </section>
@@ -545,37 +1546,77 @@ function Pricing() {
 }
 
 function Testimonials() {
-  const [active, setActive] = useState(0)
   const testimonials = [
-    ['“', 'I used to spend two hours on internal emails every morning. Haelo handles most of it before I sit down.', 'Adaeze O.', 'CEO · Retail Group'],
-    ['“', 'The first reply Haelo sent for me was the fastest I had ever answered — and it was the right call.', 'Kunle A.', 'MD · Construction'],
-    ['“', 'Five senior managers on it now. Response time went from days to minutes.', 'Temi B.', 'COO · Financial Services'],
+    ['AO', 'Adaeze O.', 'CEO · Retail Group', 'I used to spend two hours on internal emails every morning. Haelo handles most of it before I sit down.'],
+    ['KA', 'Kunle A.', 'MD · Construction', 'The first reply Haelo prepared for me was the fastest I had ever answered — and it was the right call.'],
+    ['TB', 'Temi B.', 'COO · Financial Services', 'Five senior managers on it now. Response time went from days to minutes.'],
   ]
 
+  const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    const id = window.setInterval(
+      () => setActive((value) => (value + 1) % testimonials.length),
+      5000,
+    )
+
+    return () => window.clearInterval(id)
+  }, [testimonials.length])
+
+  const current = testimonials[active]
+
   return (
-    <section className="testimonials">
-      <div className="testimonial-noise" />
-      <div className="section-shell">
-        <div className="testimonial-head">
-          <Eyebrow light>What execs say</Eyebrow>
-          <div className="testimonial-controls">
-            {testimonials.map((_, i) => (
-              <button key={i} className={active === i ? 'active' : ''} onClick={() => setActive(i)}
-                aria-label={`Show testimonial ${i + 1}`} />
-            ))}
+    <section className="relative overflow-hidden bg-[#111111] px-5 py-24 text-white sm:px-6 lg:px-8 lg:py-32">
+      <div className="pointer-events-none absolute left-1/2 top-[-280px] h-[650px] w-[900px] -translate-x-1/2 rounded-full bg-[#6D28D9]/10 blur-[120px]" />
+
+      <div className="relative mx-auto max-w-[1000px] text-center">
+        <SectionHeading
+          eyebrow="What executives say"
+          center
+          title={
+            <>
+              Less inbox.
+              <br />
+              <span className="font-[var(--font-instrument)] font-normal italic text-[#C4B5FD]">
+                More headspace.
+              </span>
+            </>
+          }
+        />
+
+        <div key={active} className="animate-[heroMessage_650ms_ease-out_both]">
+          <div className="font-[var(--font-instrument)] text-6xl italic leading-none text-[#C4B5FD]/50">
+            “
+          </div>
+
+          <blockquote className="mx-auto mt-3 max-w-4xl text-2xl font-medium leading-[1.2] tracking-[-0.04em] text-white sm:text-4xl lg:text-[48px]">
+            {current[3]}
+          </blockquote>
+
+          <div className="mt-9 flex items-center justify-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-[#C4B5FD] text-[10px] font-semibold text-[#111111]">
+              {current[0]}
+            </div>
+            <div className="text-left">
+              <div className="text-[11px] font-semibold">{current[1]}</div>
+              <div className="mt-0.5 text-[9px] text-white/30">{current[2]}</div>
+            </div>
           </div>
         </div>
 
-        <div className="testimonial-stage">
-          <span className="quote-mark">{testimonials[active][0]}</span>
-          <blockquote key={active}>{testimonials[active][1]}</blockquote>
-          <div className="quote-author">
-            <span>{testimonials[active][2][0]}</span>
-            <div><strong>{testimonials[active][2]}</strong><small>{testimonials[active][3]}</small></div>
-          </div>
+        <div className="mt-10 flex justify-center gap-2">
+          {testimonials.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => setActive(index)}
+              aria-label={`Show testimonial ${index + 1}`}
+              className={`h-1 rounded-full transition-all duration-300 ${
+                active === index ? 'w-9 bg-[#C4B5FD]' : 'w-4 bg-white/15'
+              }`}
+            />
+          ))}
         </div>
-
-        <p className="illustrative">Illustrative — swap in real client quotes as they come in.</p>
       </div>
     </section>
   )
@@ -583,19 +1624,40 @@ function Testimonials() {
 
 function FinalCTA() {
   return (
-    <section className="final-cta">
-      <div className="cta-ring ring-a" />
-      <div className="cta-ring ring-b" />
-      <div className="cta-inner">
-        <Eyebrow>Ready when you are</Eyebrow>
-        <h2>Your team deserves<br /><em>a reply today.</em></h2>
-        <p>First 30 days free. No credit card. Set up in under 15 minutes.</p>
-        <div className="hero-actions centered">
-          <MagneticButton href="/auth/signup">Create your account</MagneticButton>
-          <a className="outline-btn" href="https://wa.me/2349000000000"
-            target="_blank" rel="noopener noreferrer">
-            <WA size={16} color={T.green} /> Start on WhatsApp
-          </a>
+    <section className="relative overflow-hidden bg-white px-5 py-28 text-center sm:px-6 lg:px-8 lg:py-40">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[650px] w-[650px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#6D28D9]/[0.05] animate-[spin_45s_linear_infinite]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[440px] w-[700px] -translate-x-1/2 -translate-y-1/2 rotate-[-16deg] rounded-[50%] border border-black/[0.035] animate-[spin_38s_linear_infinite_reverse]" />
+
+      <div className="relative mx-auto max-w-3xl">
+        <SectionHeading
+          eyebrow="Ready when you are"
+          center
+          title={
+            <>
+              Let Haelo handle
+              <br />
+              <span className="font-[var(--font-instrument)] font-normal italic text-[#6D28D9]">
+                what happens next.
+              </span>
+            </>
+          }
+          description="Start your 7-day free trial and give your team more room to focus on the work that matters."
+        />
+
+        <Link
+          href="/auth/signup"
+          className="group inline-flex min-h-[50px] items-center justify-center gap-2 rounded-full bg-[#111111] px-7 text-[11px] font-semibold text-white shadow-[0_14px_30px_rgba(17,17,17,0.13)] transition-all duration-300 hover:-translate-y-1 hover:bg-[#6D28D9] hover:shadow-[0_18px_38px_rgba(109,40,217,0.19)]"
+        >
+          Start 7-day free trial
+          <Arrow className="transition-transform group-hover:translate-x-0.5" />
+        </Link>
+
+        <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[9px] text-black/30">
+          <span>7 days free</span>
+          <span>•</span>
+          <span>No credit card</span>
+          <span>•</span>
+          <span>Cancel anytime</span>
         </div>
       </div>
     </section>
@@ -603,30 +1665,48 @@ function FinalCTA() {
 }
 
 function Footer() {
-  const columns: [string, string[]][] = [
-  ['Product', ['How it works', 'Features', 'Pricing']],
-  ['Company', ['About', 'Blog', 'Careers', 'Contact']],
-  ['Legal', ['Privacy', 'Terms', 'Security']],
-]
+  const columns = [
+    ['Product', [['How it works', '#how-it-works'], ['Features', '#features'], ['Pricing', '#pricing']]],
+    ['Company', [['About', '#'], ['Blog', '#'], ['Careers', '#'], ['Contact', '#']]],
+    ['Legal', [['Privacy', '#'], ['Terms', '#'], ['Security', '#']]],
+  ]
 
   return (
-    <footer>
-      <div className="footer-shell">
-        <div className="footer-main">
-          <div className="footer-brand">
-            <Link href="/" className="logo light">haelo<span>.</span></Link>
-            <p>Be everywhere. Miss nothing.<br />AI Chief of Staff for Nigerian executives.</p>
+    <footer className="bg-[#111111] px-6 pb-8 pt-16 text-white lg:px-10">
+      <div className="mx-auto max-w-[1320px]">
+        <div className="grid gap-12 border-b border-white/[0.08] pb-14 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
+          <div>
+            <Logo light />
+            <p className="mt-4 max-w-xs text-[10px] leading-6 text-white/30">
+              AI chief of staff for teams that want to spend less time managing
+              inboxes and more time making decisions.
+            </p>
           </div>
-          {columns.map(([heading, links]) => (
-            <div className="footer-column" key={heading}>
-              <small>{heading}</small>
-              {links.map(link => <a href="#" key={link}>{link}</a>)}
+
+          {columns.map(([heading, items]) => (
+            <div key={heading as string}>
+              <div className="mb-4 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/20">
+                {heading as string}
+              </div>
+
+              <div className="space-y-3">
+                {(items as string[][]).map(([label, href]) => (
+                  <a
+                    key={label}
+                    href={href}
+                    className="block w-fit text-[10px] text-white/40 transition hover:translate-x-1 hover:text-white"
+                  >
+                    {label}
+                  </a>
+                ))}
+              </div>
             </div>
           ))}
         </div>
-        <div className="footer-bottom">
+
+        <div className="flex flex-col justify-between gap-3 pt-6 text-[8px] text-white/20 sm:flex-row">
           <span>© 2026 Haelo. All rights reserved.</span>
-          <span>Built in Lagos 🇳🇬</span>
+          <span>Built in Lagos.</span>
         </div>
       </div>
     </footer>
@@ -635,403 +1715,76 @@ function Footer() {
 
 export default function HomePage() {
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
-        :root {
-          --ink: ${T.ink};
-          --cream: ${T.cream};
-          --gold: ${T.gold};
-          --green: ${T.green};
+    <main
+      className={`${jakarta.variable} ${instrument.variable} min-h-screen bg-white font-[var(--font-jakarta)] text-[#111111] antialiased selection:bg-[#6D28D9] selection:text-white`}
+    >
+      <style jsx global>{`
+        @keyframes heroMessage {
+          0% {
+            opacity: 0;
+            transform: translateY(18px) scale(0.985);
+            filter: blur(5px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+          }
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
+        @keyframes heroResponse {
+          0% {
+            opacity: 0;
+            transform: translateY(28px) scale(0.96);
+            filter: blur(8px);
+          }
+          55% {
+            opacity: 1;
+            transform: translateY(-3px) scale(1.01);
+            filter: blur(0);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes float {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+
+        html {
+          scroll-behavior: smooth;
+        }
+
         body {
           margin: 0;
-          background: var(--cream);
-          color: var(--ink);
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          -webkit-font-smoothing: antialiased;
           overflow-x: hidden;
-        }
-        a, button, input { font: inherit; }
-        a { color: inherit; }
-        button { cursor: pointer; }
-        ::selection { background: var(--gold); color: var(--ink); }
-
-        .nav {
-          position: fixed; inset: 0 0 auto; height: 78px; z-index: 1000;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 5.5%;
-          transition: .45s cubic-bezier(.2,.8,.2,1);
-        }
-        .nav-scrolled {
-          height: 68px; background: rgba(246,243,236,.82);
-          backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
-          border-bottom: 1px solid rgba(16,34,13,.08);
-          box-shadow: 0 12px 40px rgba(16,34,13,.04);
-        }
-        .logo { text-decoration: none; font-size: 22px; font-weight: 800; letter-spacing: -.055em; }
-        .logo span { color: var(--gold); }
-        .logo.light { color: var(--cream); }
-        .nav-links { display: flex; gap: 38px; margin-left: 10%; }
-        .nav-links a {
-          font-size: 13px; font-weight: 600; color: rgba(16,34,13,.55);
-          text-decoration: none; position: relative; padding: 10px 0;
-        }
-        .nav-links a::after {
-          content: ''; position: absolute; left: 0; right: 100%; bottom: 2px; height: 1px;
-          background: var(--gold); transition: right .3s ease;
-        }
-        .nav-links a:hover { color: var(--ink); }
-        .nav-links a:hover::after { right: 0; }
-        .nav-actions { display: flex; align-items: center; gap: 16px; }
-        .nav-cta {
-          display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
-          background: var(--ink); color: var(--cream); border-radius: 9px; padding: 11px 17px;
-          font-size: 12.5px; font-weight: 700; transition: transform .25s, box-shadow .25s;
-        }
-        .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(16,34,13,.15); }
-        .menu-button { display: none; border: 0; background: none; padding: 8px; }
-        .menu-button i { display:block; width: 22px; height: 2px; background: var(--ink); margin: 5px 0; transition: .3s; }
-        .menu-button.is-open i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-        .menu-button.is-open i:nth-child(2) { opacity: 0; }
-        .menu-button.is-open i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-        .mobile-menu {
-          position: fixed; z-index: 999; top: 68px; left: 0; right: 0;
-          padding: 8px 5% 28px; background: rgba(246,243,236,.97);
-          backdrop-filter: blur(20px); border-bottom: 1px solid var(--line);
-          transform: translateY(-120%); opacity: 0; transition: .45s cubic-bezier(.2,.8,.2,1);
-        }
-        .mobile-menu.open { transform: translateY(0); opacity: 1; }
-        .mobile-menu a { display:flex; justify-content:space-between; align-items:center; padding: 17px 0; border-bottom:1px solid var(--line); text-decoration:none; font-weight:700; font-size:15px; }
-        .mobile-menu .mobile-cta { margin-top: 16px; justify-content:center; background:var(--ink); color:var(--cream); border:0; border-radius:9px; }
-
-        .hero {
-          min-height: 880px; position: relative; overflow: hidden; background: var(--cream);
-          display: flex; align-items: center; padding: 145px 5.5% 100px;
-        }
-        .hero-grid {
-          position:absolute; inset:0; opacity:.34;
-          background-image: linear-gradient(rgba(16,34,13,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(16,34,13,.045) 1px, transparent 1px);
-          background-size: 72px 72px;
-          mask-image: linear-gradient(to bottom, black 0%, transparent 78%);
-        }
-        .hero-glow { position:absolute; border-radius:50%; filter:blur(2px); pointer-events:none; }
-        .hero-glow-one { width:500px; height:500px; right:2%; top:5%; background:radial-gradient(circle, rgba(185,149,53,.14), transparent 68%); animation: breathe 7s ease-in-out infinite; }
-        .hero-glow-two { width:420px; height:420px; left:-15%; bottom:-20%; background:radial-gradient(circle, rgba(46,125,82,.08), transparent 68%); animation: breathe 9s ease-in-out infinite reverse; }
-        .hero-inner { width:min(1220px,100%); margin:auto; display:grid; grid-template-columns: .92fr 1.08fr; gap:7%; align-items:center; position:relative; z-index:2; }
-        .hero-copy { animation: heroIn .9s cubic-bezier(.2,.8,.2,1) both; }
-        .hero-kicker { display:flex; align-items:center; gap:10px; font-size:10px; letter-spacing:.19em; font-weight:800; color:var(--gold); margin-bottom:23px; }
-        .live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 5px rgba(46,125,82,.1); animation: pulse 2s infinite; }
-        .hero h1 { font-size:clamp(4rem,6.8vw,6.6rem); line-height:.94; letter-spacing:-.075em; margin:0 0 30px; font-weight:800; }
-        .hero h1 span { color:transparent; -webkit-text-stroke:1.4px var(--ink); }
-        .hero-copy > p { max-width:570px; font-size:17px; line-height:1.75; color:rgba(16,34,13,.59); margin:0 0 35px; }
-        .hero-actions { display:flex; flex-wrap:wrap; gap:11px; align-items:center; }
-        .magnetic-btn, .outline-btn {
-          display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:50px; padding:0 21px;
-          border-radius:10px; text-decoration:none; font-size:13px; font-weight:700; transition:.3s cubic-bezier(.2,.8,.2,1);
-        }
-        .magnetic-btn { background:var(--ink); color:var(--cream); box-shadow:0 10px 28px rgba(16,34,13,.13); }
-        .magnetic-btn:hover { transform:translateY(-3px); box-shadow:0 17px 34px rgba(16,34,13,.19); }
-        .outline-btn { border:1px solid rgba(16,34,13,.16); color:var(--ink); }
-        .outline-btn:hover { background:white; transform:translateY(-3px); box-shadow:0 10px 25px rgba(16,34,13,.07); }
-        .trust-row { display:flex; flex-wrap:wrap; gap:18px; margin-top:25px; color:rgba(16,34,13,.42); font-size:10.5px; font-weight:600; }
-        .trust-row span { display:flex; align-items:center; gap:6px; }
-        .check { width:19px; height:19px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(185,149,53,.1); flex-shrink:0; }
-
-        .hero-product { min-height:590px; position:relative; display:flex; align-items:center; justify-content:center; animation: productIn 1.05s .12s cubic-bezier(.2,.8,.2,1) both; }
-        .product-orbit { position:absolute; border:1px solid rgba(185,149,53,.2); border-radius:50%; }
-        .orbit-one { width:570px; height:570px; animation: spin 28s linear infinite; }
-        .orbit-two { width:650px; height:330px; transform:rotate(-28deg); border-color:rgba(16,34,13,.08); animation: spinReverse 22s linear infinite; }
-        .whatsapp-card {
-          position:relative; width:min(405px,90%); min-height:505px; border-radius:27px; overflow:hidden;
-          background:#f9f8f3; border:1px solid rgba(16,34,13,.12);
-          box-shadow:0 45px 90px rgba(16,34,13,.19), 0 8px 20px rgba(16,34,13,.06);
-          transform:rotate(2deg); transition:transform .5s ease;
-        }
-        .whatsapp-card:hover { transform:rotate(0) translateY(-8px); }
-        .wa-top { height:75px; padding:0 20px; display:flex; align-items:center; gap:11px; background:var(--ink); color:var(--cream); }
-        .wa-avatar { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; background:var(--gold); color:var(--ink); font-weight:800; }
-        .wa-top strong { display:block; font-size:13px; }
-        .wa-top small { display:block; font-size:9px; opacity:.45; margin-top:3px; }
-        .wa-menu { margin-left:auto; letter-spacing:2px; opacity:.5; }
-        .wa-body { padding:22px 18px 16px; min-height:375px; background:linear-gradient(135deg,#f4f1e8,#fbfaf6); }
-        .date-pill { width:max-content; margin:0 auto 18px; padding:5px 10px; border-radius:30px; background:rgba(16,34,13,.07); color:rgba(16,34,13,.4); font-size:8px; font-weight:800; letter-spacing:.13em; }
-        .message-bubble, .draft-bubble { max-width:90%; border-radius:15px 15px 15px 5px; padding:15px; box-shadow:0 8px 22px rgba(16,34,13,.05); animation:bubbleIn .6s ease both; }
-        .message-bubble { background:white; }
-        .message-bubble small, .draft-label { display:block; font-size:8px; letter-spacing:.11em; font-weight:800; color:var(--gold); margin-bottom:8px; }
-        .message-bubble strong { font-size:12px; display:block; margin-bottom:7px; }
-        .message-bubble p, .draft-bubble p { font-size:10.5px; line-height:1.6; color:rgba(16,34,13,.59); margin:0; }
-        .message-from { display:flex; justify-content:space-between; margin-top:12px; font-size:8px; color:rgba(16,34,13,.35); }
-        .draft-bubble { margin:13px 0 0 auto; background:#e8f1e5; border-radius:15px 15px 5px 15px; animation-delay:.08s; }
-        .draft-label { color:var(--green); display:flex; align-items:center; gap:5px; }
-        .draft-label span { width:5px; height:5px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
-        .bubble-actions { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:6px; margin-top:14px; }
-        .bubble-actions button { border:0; border-radius:7px; padding:8px 4px; font-size:8.5px; font-weight:800; background:var(--ink); color:var(--cream); }
-        .bubble-actions button:nth-child(2), .bubble-actions button:nth-child(3) { background:rgba(16,34,13,.08); color:var(--ink); }
-        .wa-bottom { height:54px; padding:0 17px; display:flex; align-items:center; gap:9px; font-size:8.5px; color:rgba(16,34,13,.36); border-top:1px solid rgba(16,34,13,.08); }
-        .wa-bottom i { width:6px; height:6px; border-radius:50%; background:var(--gold); animation:pulse 2s infinite; }
-        .float-card { position:absolute; display:flex; gap:9px; align-items:center; padding:11px 13px; border-radius:12px; background:rgba(255,255,255,.86); backdrop-filter:blur(15px); box-shadow:0 18px 45px rgba(16,34,13,.12); border:1px solid rgba(16,34,13,.08); animation:float 5s ease-in-out infinite; }
-        .float-card b { display:block; font-size:9px; }
-        .float-card small { display:block; font-size:7.5px; color:rgba(16,34,13,.4); margin-top:3px; }
-        .float-card-one { left:0; top:17%; }
-        .float-card-two { right:0; bottom:15%; animation-delay:-2s; }
-        .float-icon, .pulse-check { width:25px; height:25px; display:grid; place-items:center; border-radius:8px; background:rgba(185,149,53,.12); color:var(--gold); font-size:11px; }
-        .pulse-check { background:rgba(46,125,82,.1); color:var(--green); }
-        .scroll-cue { position:absolute; bottom:30px; left:5.5%; display:flex; align-items:center; gap:12px; font-size:8px; font-weight:800; letter-spacing:.18em; color:rgba(16,34,13,.3); }
-        .scroll-cue i { display:block; width:42px; height:1px; background:rgba(16,34,13,.18); position:relative; overflow:hidden; }
-        .scroll-cue i::after { content:''; position:absolute; left:0; width:13px; height:100%; background:var(--gold); animation:scrollLine 2s infinite; }
-
-        .ledger { background:var(--ink); color:var(--cream); position:relative; overflow:hidden; }
-        .ledger::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%, rgba(185,149,53,.12), transparent 48%); }
-        .ledger-inner { width:min(1220px,89%); margin:auto; display:grid; grid-template-columns:repeat(3,1fr); }
-        .ledger-item { position:relative; min-height:210px; padding:56px 45px; border-left:1px solid rgba(246,243,236,.1); }
-        .ledger-item:first-child { border-left:0; }
-        .ledger-index { position:absolute; top:30px; right:35px; font-size:8px; letter-spacing:.15em; color:rgba(246,243,236,.25); }
-        .ledger-item strong { display:block; font-size:clamp(2.8rem,4vw,4rem); color:var(--gold); letter-spacing:-.06em; line-height:1; margin-bottom:12px; }
-        .ledger-item p { max-width:260px; margin:0; font-size:12px; line-height:1.7; color:rgba(246,243,236,.48); }
-
-        .section { padding:125px 5.5%; }
-        .section-shell { width:min(1220px,100%); margin:auto; }
-        .cream-section { background:var(--cream); }
-        .eyebrow { display:flex; align-items:center; gap:10px; color:var(--gold); font-size:9.5px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; margin-bottom:23px; }
-        .eyebrow > span { width:25px; height:1px; background:var(--gold); }
-        .eyebrow-light { color:var(--gold); }
-        .section-heading { margin-bottom:62px; }
-        .section-heading h2, .feature-intro h2, .integration-inner h2, .cta-inner h2 {
-          margin:0; font-size:clamp(2.7rem,4.5vw,4.6rem); line-height:1; letter-spacing:-.065em; font-weight:800;
-        }
-        em { font-style:normal; color:transparent; -webkit-text-stroke:1px currentColor; }
-        .section-heading p { max-width:470px; margin:25px 0 0; color:rgba(16,34,13,.52); font-size:14px; line-height:1.75; }
-        .split-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:40px; }
-        .split-heading p { margin:0; }
-
-        .steps-grid { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-        .step-card { min-height:320px; padding:27px 27px 25px 0; margin-right:27px; position:relative; border-right:1px solid var(--line); }
-        .step-card:last-child { border-right:0; }
-        .step-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:55px; }
-        .step-top > span { font-size:10px; color:var(--gold); font-weight:800; letter-spacing:.1em; }
-        .step-top i { width:7px; height:7px; border-radius:50%; border:1px solid var(--gold); transition:.3s; }
-        .step-card:hover .step-top i { background:var(--gold); box-shadow:0 0 0 5px rgba(185,149,53,.1); }
-        .step-card h3 { font-size:16px; margin:0 0 12px; letter-spacing:-.025em; }
-        .step-card p { max-width:220px; font-size:12px; line-height:1.75; color:rgba(16,34,13,.52); margin:0; }
-        .step-line { position:absolute; bottom:25px; left:0; width:0; height:1px; background:var(--gold); transition:width .5s; }
-        .step-card:hover .step-line { width:70%; }
-        .step-arrow { position:absolute; bottom:16px; right:27px; opacity:.2; transition:.3s; }
-        .step-card:hover .step-arrow { opacity:1; transform:translate(3px,-3px); }
-
-        .flow-strip { margin-top:70px; display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); border-radius:18px; overflow:hidden; box-shadow:0 22px 55px rgba(16,34,13,.05); }
-        .flow-step { min-height:150px; padding:24px; display:flex; gap:18px; position:relative; background:rgba(255,255,255,.42); border-right:1px solid var(--line); }
-        .flow-step:last-child { border-right:0; }
-        .flow-number { color:var(--gold); font-size:10px; font-weight:800; }
-        .flow-step small { display:block; font-size:10px; color:rgba(16,34,13,.38); text-transform:uppercase; letter-spacing:.1em; margin-bottom:5px; }
-        .flow-step strong { display:block; font-size:13px; }
-        .flow-step p { margin:8px 0 0; color:rgba(16,34,13,.55); font-size:11px; line-height:1.5; }
-        .flow-arrow { position:absolute; right:-11px; top:50%; width:22px; height:22px; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; background:var(--cream); z-index:2; }
-
-        .feature-section { background:#EEEAE1; }
-        .feature-section .section-shell { display:grid; grid-template-columns:.8fr 1.2fr; gap:100px; }
-        .feature-intro { position:relative; }
-        .feature-intro p { max-width:320px; color:rgba(16,34,13,.53); font-size:13px; line-height:1.75; margin-top:25px; }
-        .feature-stamp { display:inline-block; margin-top:85px; border:1px solid rgba(16,34,13,.13); padding:15px 17px; font-size:8px; letter-spacing:.15em; color:rgba(16,34,13,.32); line-height:1.6; transform:rotate(-3deg); }
-        .feature-stamp b { color:var(--ink); }
-        .feature-list { border-top:1px solid rgba(16,34,13,.13); }
-        .feature-row { display:grid; grid-template-columns:45px 1fr 30px; gap:15px; align-items:start; padding:24px 0; border-bottom:1px solid rgba(16,34,13,.13); transition:.35s; }
-        .feature-row:hover { padding-left:12px; background:rgba(255,255,255,.35); }
-        .feature-number { font-size:9px; color:rgba(16,34,13,.3); padding-top:4px; }
-        .feature-copy h3 { font-size:14px; margin:0 0 6px; }
-        .feature-copy p { margin:0; font-size:11.5px; line-height:1.65; color:rgba(16,34,13,.48); }
-        .feature-plus { font-size:18px; color:rgba(16,34,13,.22); font-weight:400; transition:.3s; }
-        .feature-row:hover .feature-plus { color:var(--gold); transform:rotate(45deg); }
-
-        .integrations { min-height:650px; padding:125px 5.5%; position:relative; overflow:hidden; background:var(--ink); color:var(--cream); }
-        .integration-glow { position:absolute; width:700px; height:700px; border-radius:50%; top:-300px; right:-150px; background:radial-gradient(circle, rgba(185,149,53,.14), transparent 67%); animation:breathe 8s infinite; }
-        .integration-inner { width:min(1220px,100%); margin:auto; position:relative; }
-        .integration-inner h2 { max-width:650px; margin-bottom:70px; }
-        .integration-inner h2 span { color:var(--gold); }
-        .integration-list { border-top:1px solid rgba(246,243,236,.12); display:grid; grid-template-columns:repeat(5,1fr); }
-        .integration-item { min-height:150px; padding:25px 18px; border-right:1px solid rgba(246,243,236,.12); position:relative; transition:.35s; }
-        .integration-item:first-child { border-left:1px solid rgba(246,243,236,.12); }
-        .integration-item:hover { background:rgba(246,243,236,.035); transform:translateY(-6px); }
-        .integration-item span { display:block; font-size:8px; color:rgba(246,243,236,.25); margin-bottom:55px; }
-        .integration-item strong { font-size:13px; }
-        .integration-note { font-size:10px; color:rgba(246,243,236,.3); margin-top:25px; }
-
-        .pricing-section { padding-bottom:145px; }
-        .pricing-card { display:grid; grid-template-columns:1.1fr .9fr; background:white; border:1px solid var(--line); border-radius:22px; overflow:hidden; box-shadow:0 30px 75px rgba(16,34,13,.07); }
-        .calculator { padding:45px; }
-        .calculator-head { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
-        .calculator-head small, .price-summary > div > small { color:rgba(16,34,13,.35); font-size:8.5px; font-weight:800; letter-spacing:.15em; }
-        .calculator-head h3 { margin:8px 0 0; font-size:21px; letter-spacing:-.035em; }
-        .live-price { border:1px solid rgba(46,125,82,.2); color:var(--green); border-radius:30px; padding:6px 9px; font-size:7px; font-weight:800; letter-spacing:.12em; }
-        .calculator-copy { max-width:420px; font-size:12px; line-height:1.7; color:rgba(16,34,13,.5); margin:17px 0 36px; }
-        .seat-control { border-top:1px solid var(--line); padding-top:25px; }
-        .seat-label { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:20px; }
-        .seat-label span { font-size:12px; color:rgba(16,34,13,.5); }
-        .seat-label strong { font-size:25px; letter-spacing:-.05em; }
-        input[type=range] { appearance:none; width:100%; height:4px; border-radius:10px; outline:0; background:linear-gradient(to right,var(--gold) 0%,var(--gold) var(--range, 18%),rgba(16,34,13,.1) var(--range, 18%),rgba(16,34,13,.1) 100%); }
-        input[type=range]::-webkit-slider-thumb { appearance:none; width:20px; height:20px; border-radius:50%; background:var(--gold); border:4px solid white; box-shadow:0 2px 8px rgba(16,34,13,.2); }
-        input[type=range]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:var(--gold); border:4px solid white; box-shadow:0 2px 8px rgba(16,34,13,.2); }
-        .range-labels { display:flex; justify-content:space-between; margin-top:10px; font-size:8px; color:rgba(16,34,13,.3); }
-        .breakdown { margin-top:28px; padding:15px 18px; background:var(--cream); border-radius:12px; }
-        .breakdown-row { display:flex; justify-content:space-between; gap:15px; padding:6px 0; font-size:11px; }
-        .breakdown-row span { color:rgba(16,34,13,.58); }
-        .breakdown-row small { color:rgba(16,34,13,.3); margin-left:7px; }
-        .breakdown-row strong { font-size:11px; }
-        .rate-note { margin-top:9px; padding-top:10px; border-top:1px solid var(--line); font-size:9px; color:var(--gold); line-height:1.5; }
-        .custom-box { margin-top:28px; display:flex; gap:13px; padding:18px; background:var(--cream); border-radius:12px; }
-        .custom-box > span { color:var(--gold); font-weight:800; font-size:11px; }
-        .custom-box strong { font-size:12px; }
-        .custom-box p { font-size:10px; line-height:1.5; color:rgba(16,34,13,.5); margin:4px 0 0; }
-        .price-summary { padding:45px 40px; background:var(--ink); color:var(--cream); display:flex; flex-direction:column; justify-content:space-between; min-height:480px; }
-        .price-total { margin-top:10px; color:var(--gold); font-size:clamp(2.6rem,4vw,4rem); font-weight:800; letter-spacing:-.065em; }
-        .price-summary > div > p { font-size:10px; color:rgba(246,243,236,.32); margin:4px 0 0; }
-        .included-list { margin:35px 0; display:grid; gap:10px; }
-        .included-list div { display:flex; align-items:center; gap:8px; font-size:10.5px; color:rgba(246,243,236,.62); }
-        .price-summary .check { background:rgba(246,243,236,.08); }
-        .price-cta { width:100%; min-height:50px; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--gold); color:var(--ink); border-radius:9px; text-decoration:none; font-size:12px; font-weight:800; transition:.3s; }
-        .price-cta:hover { transform:translateY(-3px); box-shadow:0 13px 28px rgba(0,0,0,.22); }
-        .price-footnote { text-align:center; color:rgba(246,243,236,.22); font-size:8.5px; margin-top:11px; }
-
-        .testimonials { background:var(--ink); color:var(--cream); padding:125px 5.5%; position:relative; overflow:hidden; }
-        .testimonial-noise { position:absolute; inset:0; opacity:.18; background-image:radial-gradient(rgba(246,243,236,.5) .5px, transparent .5px); background-size:6px 6px; mask-image:linear-gradient(to bottom, transparent, black, transparent); }
-        .testimonial-head { display:flex; justify-content:space-between; align-items:flex-end; }
-        .testimonial-controls { display:flex; gap:7px; }
-        .testimonial-controls button { width:32px; height:5px; border:0; border-radius:10px; background:rgba(246,243,236,.16); padding:0; transition:.3s; }
-        .testimonial-controls button.active { background:var(--gold); width:50px; }
-        .testimonial-stage { max-width:920px; margin:65px auto 0; text-align:center; }
-        .quote-mark { color:var(--gold); font-family:Georgia,serif; font-size:75px; line-height:.5; display:block; }
-        blockquote { font-size:clamp(1.8rem,3.5vw,3.4rem); line-height:1.2; letter-spacing:-.05em; margin:25px 0 45px; font-weight:600; animation:quoteIn .5s ease both; }
-        .quote-author { display:flex; justify-content:center; align-items:center; gap:12px; }
-        .quote-author > span { width:38px; height:38px; display:grid; place-items:center; background:var(--gold); color:var(--ink); border-radius:50%; font-weight:800; }
-        .quote-author div { text-align:left; }
-        .quote-author strong, .quote-author small { display:block; }
-        .quote-author strong { font-size:11px; }
-        .quote-author small { margin-top:3px; color:rgba(246,243,236,.35); font-size:9px; }
-        .illustrative { text-align:center; color:rgba(246,243,236,.2); font-size:8.5px; margin-top:65px; }
-
-        .final-cta { min-height:650px; display:grid; place-items:center; text-align:center; padding:110px 5.5%; position:relative; overflow:hidden; background:var(--cream); }
-        .cta-inner { position:relative; z-index:2; }
-        .cta-inner .eyebrow { justify-content:center; }
-        .cta-inner h2 { font-size:clamp(3rem,6vw,5.8rem); margin-bottom:25px; }
-        .cta-inner p { color:rgba(16,34,13,.5); font-size:14px; margin-bottom:32px; }
-        .centered { justify-content:center; }
-        .cta-ring { position:absolute; border:1px solid rgba(16,34,13,.08); border-radius:50%; pointer-events:none; }
-        .ring-a { width:650px; height:650px; animation:spin 35s linear infinite; }
-        .ring-b { width:430px; height:430px; border-color:rgba(185,149,53,.18); animation:spinReverse 27s linear infinite; }
-
-        footer { background:var(--ink); color:var(--cream); padding:70px 5.5% 35px; }
-        .footer-shell { width:min(1220px,100%); margin:auto; }
-        .footer-main { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:60px; padding-bottom:65px; }
-        .footer-brand p { color:rgba(246,243,236,.35); font-size:11px; line-height:1.7; margin-top:15px; }
-        .footer-column small { display:block; text-transform:uppercase; letter-spacing:.15em; font-size:8px; color:rgba(246,243,236,.22); font-weight:800; margin-bottom:17px; }
-        .footer-column a { display:block; width:max-content; color:rgba(246,243,236,.5); text-decoration:none; font-size:11px; margin-bottom:11px; transition:.2s; }
-        .footer-column a:hover { color:var(--cream); transform:translateX(3px); }
-        .footer-bottom { border-top:1px solid rgba(246,243,236,.1); padding-top:22px; display:flex; justify-content:space-between; gap:20px; color:rgba(246,243,236,.22); font-size:9px; }
-
-        .reveal { opacity:0; transform:translateY(30px); transition:opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); }
-        .reveal.visible { opacity:1; transform:none; }
-        .reveal.visible .step-card:nth-child(1), .reveal.visible .feature-row:nth-child(1) { transition-delay:.04s; }
-        .reveal.visible .step-card:nth-child(2), .reveal.visible .feature-row:nth-child(2) { transition-delay:.10s; }
-        .reveal.visible .step-card:nth-child(3), .reveal.visible .feature-row:nth-child(3) { transition-delay:.16s; }
-        .reveal.visible .step-card:nth-child(4), .reveal.visible .feature-row:nth-child(4) { transition-delay:.22s; }
-
-        @keyframes heroIn { from { opacity:0; transform:translateY(35px); } to { opacity:1; transform:none; } }
-        @keyframes productIn { from { opacity:0; transform:translateX(40px) scale(.96); } to { opacity:1; transform:none; } }
-        @keyframes breathe { 0%,100% { transform:scale(1); opacity:.8; } 50% { transform:scale(1.08); opacity:1; } }
-        @keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(46,125,82,.15); } 50% { box-shadow:0 0 0 6px rgba(46,125,82,0); } }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        @keyframes spinReverse { to { transform:rotate(-360deg); } }
-        @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
-        @keyframes bubbleIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
-        @keyframes scrollLine { 0% { transform:translateX(-15px); } 50%,100% { transform:translateX(45px); } }
-        @keyframes quoteIn { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:none; } }
-
-        @media (max-width: 1050px) {
-          .hero-inner { grid-template-columns:1fr; max-width:760px; }
-          .hero { padding-top:125px; }
-          .hero-product { margin-top:20px; min-height:550px; }
-          .hero-copy { text-align:center; }
-          .hero-copy > p { margin-left:auto; margin-right:auto; }
-          .hero-kicker, .hero-actions, .trust-row { justify-content:center; }
-          .feature-section .section-shell { grid-template-columns:1fr; gap:55px; }
-          .feature-stamp { margin-top:35px; }
-          .steps-grid { grid-template-columns:1fr 1fr; }
-          .step-card:nth-child(2) { border-right:0; }
-          .step-card:nth-child(3), .step-card:nth-child(4) { border-top:1px solid var(--line); }
-          .integration-list { grid-template-columns:repeat(3,1fr); }
-          .integration-item:nth-child(4), .integration-item:nth-child(5) { border-top:1px solid rgba(246,243,236,.12); }
+          background: #ffffff;
         }
 
-        @media (max-width: 700px) {
-          .nav { height:68px; padding:0 5%; }
-          .nav-scrolled { height:62px; }
-          .nav-links, .nav-cta { display:none; }
-          .menu-button { display:block; }
-          .mobile-menu { top:62px; }
-          .hero { min-height:auto; padding:120px 5% 75px; }
-          .hero h1 { font-size:clamp(3.25rem,14vw,5rem); }
-          .hero-copy > p { font-size:14px; }
-          .hero-product { min-height:490px; margin-top:15px; }
-          .orbit-one { width:410px; height:410px; }
-          .orbit-two { width:450px; height:260px; }
-          .whatsapp-card { width:330px; min-height:440px; }
-          .wa-body { min-height:310px; }
-          .float-card { transform:scale(.8); }
-          .float-card-one { left:-14px; }
-          .float-card-two { right:-14px; }
-          .scroll-cue { display:none; }
-          .ledger-inner { width:90%; grid-template-columns:1fr; }
-          .ledger-item { min-height:auto; padding:38px 0; border-left:0; border-bottom:1px solid rgba(246,243,236,.1); }
-          .ledger-item:last-child { border-bottom:0; }
-          .ledger-index { top:30px; right:0; }
-          .section, .integrations, .testimonials { padding:82px 5%; }
-          .split-heading { display:block; }
-          .split-heading p { margin-top:20px; }
-          .steps-grid { grid-template-columns:1fr; }
-          .step-card, .step-card:nth-child(2) { border-right:0; border-bottom:1px solid var(--line); min-height:250px; }
-          .step-card:last-child { border-bottom:0; }
-          .flow-strip { grid-template-columns:1fr; }
-          .flow-step { border-right:0; border-bottom:1px solid var(--line); min-height:130px; }
-          .flow-step:last-child { border-bottom:0; }
-          .flow-arrow { right:20px; top:auto; bottom:-11px; transform:rotate(90deg); }
-          .feature-section .section-shell { gap:40px; }
-          .feature-row { grid-template-columns:32px 1fr 20px; }
-          .integration-list { grid-template-columns:1fr 1fr; }
-          .integration-item:nth-child(3) { border-top:1px solid rgba(246,243,236,.12); }
-          .integration-item:nth-child(4), .integration-item:nth-child(5) { border-top:1px solid rgba(246,243,236,.12); }
-          .pricing-card { grid-template-columns:1fr; }
-          .calculator, .price-summary { padding:32px 24px; }
-          .price-summary { min-height:auto; }
-          .testimonial-head { align-items:center; }
-          .testimonial-stage { margin-top:48px; }
-          .footer-main { grid-template-columns:1fr 1fr; gap:38px 25px; }
-          .footer-brand { grid-column:1 / -1; }
-          .footer-bottom { flex-direction:column; }
-          .final-cta { min-height:580px; padding:80px 5%; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+        ::selection {
+          background: #6d28d9;
+          color: #ffffff;
         }
       `}</style>
 
       <Navbar />
-      <main>
-        <Hero />
-        <Ledger />
-        <HowItWorks />
-        <Features />
-        <Integrations />
-        <Pricing />
-        <Testimonials />
-        <FinalCTA />
-      </main>
+      <Hero />
+      <Metrics />
+      <HowItWorks />
+      <Features />
+      <Integrations />
+      <Pricing />
+      <Testimonials />
+      <FinalCTA />
       <Footer />
-    </>
+    </main>
   )
 }
