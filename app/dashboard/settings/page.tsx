@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Save, CheckCircle, AlertCircle, Zap, Bell, Layers, Shield, Mail, Smartphone, Plus, Users, UserPlus, MoreVertical, X } from 'lucide-react'
-import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings } from '@/lib/api/onboard'
+import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings, addWhatsappNumber, verifyWhatsappNumber } from '@/lib/api/onboard'
 import { getAccounts, inviteAccount, resendInvite, removeAccount, type OrgAccount, type AccountRole } from '@/lib/api/accounts'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
@@ -357,6 +357,77 @@ export default function SettingsPage() {
   const [remindFreq, setRemindFreq] = useState('')
   const [emailProvider, setEmailProvider] = useState('gmail')
   const [waNum, setWaNum]         = useState('+234 801 234 5678')
+  
+  const [waSent, setWaSent] = useState(false)
+  const [waCode, setWaCode] = useState(['','','','','',''])
+  const [waVerifying, setWaVerifying] = useState(false)
+  const [waLoading, setWaLoading] = useState(false)
+  const [waError, setWaError] = useState('')
+  const otpRefs = useRef<(HTMLInputElement|null)[]>([])
+
+  const handleWaSend = async () => {
+    const rawPhone = waNum.replace(/\D/g, '')
+    if (rawPhone.length < 10) {
+      setWaError('Please enter a valid phone number.')
+      return
+    }
+    setWaLoading(true)
+    setWaError('')
+    try {
+      await addWhatsappNumber(rawPhone)
+      setWaSent(true)
+    } catch (err: any) {
+      setWaError(err.message || 'Failed to send OTP')
+    } finally {
+      setWaLoading(false)
+    }
+  }
+
+  const triggerWaVerify = async (otpCode: string[]) => {
+    setWaVerifying(true)
+    setWaError('')
+    try {
+      const rawPhone = waNum.replace(/\D/g, '')
+      await verifyWhatsappNumber(rawPhone, otpCode.join(''))
+      setWaVerified(true)
+      setWaSent(false)
+      setWaCode(['','','','','',''])
+    } catch (err: any) {
+      setWaError(err.message || 'OTP verification failed')
+    } finally {
+      setWaVerifying(false)
+    }
+  }
+
+  const handleWaCode = (i:number, val:string) => {
+    const cleanVal = val.replace(/[^a-zA-Z0-9]/g, '')
+    
+    if (cleanVal.length > 1) {
+      const next = [...waCode]
+      for (let j = 0; j < cleanVal.length && i + j < 6; j++) {
+        next[i + j] = cleanVal[j]
+      }
+      setWaCode(next)
+      if (i + cleanVal.length < 6) otpRefs.current[i + cleanVal.length]?.focus()
+      else otpRefs.current[5]?.focus()
+      
+      if (next.every(c => c !== '')) triggerWaVerify(next)
+      return
+    }
+
+    if (val !== '' && cleanVal === '') return
+
+    const v = cleanVal.slice(-1)
+    const next = [...waCode]
+    next[i] = v
+    setWaCode(next)
+    
+    if (v && i < 5) otpRefs.current[i+1]?.focus()
+    
+    if (next.every(c => c !== '')) {
+      triggerWaVerify(next)
+    }
+  }
   const [waVerified, setWaVerified] = useState(true)
   const [saved, setSaved]         = useState(false)
   const [saveFlash, setSaveFlash] = useState(false)
@@ -815,8 +886,41 @@ export default function SettingsPage() {
                 <div style={{ flex: 1 }}>
                   <TextInput type="tel" placeholder="+234 800 000 0000" value={waNum} onChange={setWaNum} />
                 </div>
-                <VerifyBtn />
+                <VerifyBtn onClick={handleWaSend} loading={waLoading} sent={waSent} />
               </div>
+              
+              {waSent && (
+                <div style={{ marginTop: 14, padding: 16, background: CREAM, borderRadius: 12, border: `1px solid ${INK_10}` }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: 8 }}>Enter the code sent to {waNum}</p>
+                  
+                  {waError && (
+                    <div style={{ marginBottom: 12, padding: 8, background: 'rgba(192,57,43,0.07)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: '#C0392B' }}>{waError}</p>
+                    </div>
+                  )}
+
+                  <div className="otp-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
+                    {waCode.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={el => { otpRefs.current[i] = el }}
+                        type="text" inputMode="text" value={digit}
+                        onChange={e => handleWaCode(i, e.target.value)}
+                        onKeyDown={e => { if (e.key==='Backspace' && !waCode[i] && i>0) { otpRefs.current[i-1]?.focus(); const next = [...waCode]; next[i-1] = ''; setWaCode(next); } }}
+                        style={{ height: 44, borderRadius: 10, background: digit ? WHITE : CREAM, border: `1.5px solid ${digit ? INK_40 : INK_10}`, color: INK, textAlign: 'center', fontSize: 18, fontWeight: 700, outline: 'none' }}
+                      />
+                    ))}
+                  </div>
+                  
+                  {waVerifying && (
+                    <p style={{ fontSize: 11, color: INK_40, marginBottom: 8 }}>Verifying...</p>
+                  )}
+                  
+                  <button onClick={() => { setWaSent(false); setWaCode(['','','','','','']); setWaError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: INK_60, padding: 0 }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </SectionCard>
 
@@ -892,12 +996,12 @@ function NotifRow({ label, on, onChange, last }: { label: string; on: boolean; o
 }
 
 // ── VERIFY BUTTON (extracted) ─────────────────────────────────────────────────
-function VerifyBtn() {
+function VerifyBtn({ onClick, loading, sent }: { onClick: () => void, loading?: boolean, sent?: boolean }) {
   const [hov, setHov] = useState(false)
-  const [sent, setSent] = useState(false)
   return (
     <button
-      onClick={() => setSent(true)}
+      onClick={onClick}
+      disabled={loading || sent}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -906,12 +1010,13 @@ function VerifyBtn() {
         color: sent ? GREEN : '#fff',
         fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 12, fontWeight: 700,
         padding: '11px 18px', borderRadius: 10, border: sent ? `1.5px solid rgba(46,125,82,0.3)` : 'none',
-        cursor: 'pointer', flexShrink: 0, transition: 'all .2s',
-        transform: hov && !sent ? 'translateY(-1px)' : 'none',
-        boxShadow: hov && !sent ? '0 4px 14px rgba(17,39,11,0.2)' : 'none',
+        cursor: (loading || sent) ? 'default' : 'pointer', flexShrink: 0, transition: 'all .2s',
+        transform: hov && !sent && !loading ? 'translateY(-1px)' : 'none',
+        boxShadow: hov && !sent && !loading ? '0 4px 14px rgba(17,39,11,0.2)' : 'none',
+        opacity: loading ? 0.7 : 1
       }}
     >
-      {sent ? <><CheckCircle size={13} /> Sent</> : 'Verify'}
+      {loading ? 'Sending...' : sent ? <><CheckCircle size={13} /> Sent</> : 'Verify'}
     </button>
   )
 }

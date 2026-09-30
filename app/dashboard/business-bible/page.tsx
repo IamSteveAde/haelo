@@ -174,7 +174,7 @@ const BIBLE_DOCS = [
   {
     id: 'overview', icon: '🏢', name: 'Company Overview', required: true,
     hint: 'What your company does, who it serves, its core values and how it operates.',
-    accept: '.pdf,.docx,.doc,.txt',
+    accept: '.csv',
     templateCols: ['section', 'content'],
     templateRows: [
       ['Company name & industry', 'e.g. Acme Corp — FMCG distribution'],
@@ -190,7 +190,7 @@ const BIBLE_DOCS = [
   {
     id: 'staff', icon: '👥', name: 'Staff Directory', required: true,
     hint: 'Every person Haelo will recognise. Must include first name, last name, role, email, and a one-sentence description.',
-    accept: '.csv,.xlsx,.xls,.pdf,.docx,.doc',
+    accept: '.csv',
     isStaff: true,
     templateFile: 'haelo_staff_directory_template.csv',
     aiPrompt: 'Fill this staff directory CSV for my team. My staff: [list names, roles]. Add a one-sentence description per person. Columns: First Name, Last Name, Role, Email, Description.',
@@ -200,7 +200,7 @@ const BIBLE_DOCS = [
   {
     id: 'org', icon: '🏗️', name: 'Org Chart', required: true,
     hint: 'Your hierarchy and reporting lines. Helps Haelo understand seniority and route responses correctly.',
-    accept: '.pdf,.docx,.doc,.csv,.png,.jpg,.jpeg',
+    accept: '.csv',
     templateCols: ['name', 'reportsTo', 'department', 'level'],
     templateRows: [
       ['John Adeyemi', 'CEO',          'Executive',  'Director'],
@@ -214,7 +214,7 @@ const BIBLE_DOCS = [
   {
     id: 'sops', icon: '📋', name: 'SOPs & Policies', required: false,
     hint: 'Approval thresholds, leave policies, procurement rules, escalation paths.',
-    accept: '.pdf,.docx,.doc,.csv',
+    accept: '.csv',
     templateCols: ['situation', 'action', 'whoApproves'],
     templateRows: [
       ['Leave request',       'Approve if 5 days notice & cover confirmed', 'CEO'],
@@ -228,7 +228,7 @@ const BIBLE_DOCS = [
   {
     id: 'comms', icon: '💬', name: 'Comms Style', required: false,
     hint: 'How you communicate — formal or direct, long or brief, phrases you use or avoid.',
-    accept: '.pdf,.docx,.doc,.txt',
+    accept: '.csv',
     templateCols: ['aspect', 'preference'],
     templateRows: [
       ['Tone',            'e.g. Direct and brief'],
