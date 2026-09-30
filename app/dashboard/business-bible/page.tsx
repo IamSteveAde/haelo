@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Download, CheckCircle, FileText, UploadCloud, Info, AlertTriangle, ArrowRight } from 'lucide-react'
 import { getStaffDirectory } from '@/lib/api/staff'
-import { uploadBibleFiles } from '@/lib/api/onboard'
+import { uploadBibleFiles, getBibleMetrics } from '@/lib/api/onboard'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
 const INK    = '#11270B'
@@ -175,7 +175,7 @@ const BIBLE_DOCS = [
     id: 'overview', icon: '🏢', name: 'Company Overview', required: true,
     hint: 'What your company does, who it serves, its core values and how it operates.',
     accept: '.pdf,.docx,.doc,.txt',
-    templateCols: ['Section', 'Content'],
+    templateCols: ['section', 'content'],
     templateRows: [
       ['Company name & industry', 'e.g. Acme Corp — FMCG distribution'],
       ['What we do',              'Products / services description'],
@@ -201,7 +201,7 @@ const BIBLE_DOCS = [
     id: 'org', icon: '🏗️', name: 'Org Chart', required: true,
     hint: 'Your hierarchy and reporting lines. Helps Haelo understand seniority and route responses correctly.',
     accept: '.pdf,.docx,.doc,.csv,.png,.jpg,.jpeg',
-    templateCols: ['Name', 'Reports To', 'Department', 'Level'],
+    templateCols: ['name', 'reportsTo', 'department', 'level'],
     templateRows: [
       ['John Adeyemi', 'CEO',          'Executive',  'Director'],
       ['Grace Obi',    'John Adeyemi', 'Operations', 'Manager'],
@@ -215,7 +215,7 @@ const BIBLE_DOCS = [
     id: 'sops', icon: '📋', name: 'SOPs & Policies', required: false,
     hint: 'Approval thresholds, leave policies, procurement rules, escalation paths.',
     accept: '.pdf,.docx,.doc,.csv',
-    templateCols: ['Situation', 'Standard Action', 'Who Approves'],
+    templateCols: ['situation', 'action', 'whoApproves'],
     templateRows: [
       ['Leave request',       'Approve if 5 days notice & cover confirmed', 'CEO'],
       ['Purchase above ₦500k','Requires Finance + CEO sign-off',            'CEO + Finance'],
@@ -229,7 +229,7 @@ const BIBLE_DOCS = [
     id: 'comms', icon: '💬', name: 'Comms Style', required: false,
     hint: 'How you communicate — formal or direct, long or brief, phrases you use or avoid.',
     accept: '.pdf,.docx,.doc,.txt',
-    templateCols: ['Aspect', 'Your Preference'],
+    templateCols: ['aspect', 'preference'],
     templateRows: [
       ['Tone',            'e.g. Direct and brief'],
       ['With senior staff','e.g. Peer-to-peer, no formality'],
@@ -264,7 +264,7 @@ function downloadCSV(filename: string, cols: string[], rows: string[][]) {
 }
 
 function downloadStaffTemplate() {
-  const csv = 'First Name,Last Name,Role,Email,Description\nTosin,Adeyemi,Operations Manager,tosin@company.com,"Manages day-to-day operations and procurement approvals"\nFunke,Balogun,HR Manager,funke@company.com,"Handles leave requests, recruitment, and staff welfare"\n'
+  const csv = 'firstName,lastName,role,email,description\nTosin,Adeyemi,Operations Manager,tosin@company.com,"Manages day-to-day operations and procurement approvals"\nFunke,Balogun,HR Manager,funke@company.com,"Handles leave requests, recruitment, and staff welfare"\n'
   const a = document.createElement('a')
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
   a.download = 'haelo_staff_directory_template.csv'; a.click()
@@ -407,7 +407,7 @@ export default function BusinessBiblePage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [uploads, setUploads]     = useState<Record<string, UploadedFile[]>>({})
   const [dragOver, setDragOver]   = useState(false)
-  const [uploadError, setUploadError] = useState('')
+  const [alert, setAlert] = useState<{ type: 'error'|'success', text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [summaryHov, setSummaryHov] = useState(false)
@@ -416,6 +416,19 @@ export default function BusinessBiblePage() {
   const [guideHov,   setGuideHov]   = useState(false)
 
   const [identifiedStaff, setIdentifiedStaff] = useState<any[]>([])
+
+  const [metrics, setMetrics] = useState<any>(null)
+
+  const fetchMetrics = async () => {
+    try {
+      const res = await getBibleMetrics()
+      if (res?.data) {
+        setMetrics(res.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch metrics:', err)
+    }
+  }
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -434,47 +447,68 @@ export default function BusinessBiblePage() {
       }
     }
     fetchStaff()
+    fetchMetrics()
   }, [])
 
   const doc = BIBLE_DOCS.find(d => d.id === activeTab)!
   const currentFiles = uploads[activeTab] || []
-  const doneCount = BIBLE_DOCS.filter(d => (uploads[d.id]||[]).length > 0).length
-  const allRequired = BIBLE_DOCS.filter(d => d.required).every(d => (uploads[d.id]||[]).length > 0)
+  
+  const doneCount = metrics ? metrics.documentUploadCount : 0
+  const allRequired = metrics ? metrics.status === 'Complete' : false
+  const identifiedCount = metrics ? metrics.staffCount : 0
+  const lastUpdatedStr = metrics && metrics.uploadedDocumentCountUpdatedAt 
+    ? new Date(metrics.uploadedDocumentCountUpdatedAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) 
+    : 'N/A'
 
   const handleFiles = useCallback(async (files: File[]) => {
-    setUploadError('')
+    setAlert(null)
     const validFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'))
     
     if (validFiles.length === 0 && files.length > 0) {
-      setUploadError('Only CSV files are accepted.')
+      setAlert({ type: 'error', text: 'Only CSV files are accepted.' })
       return
     }
 
-    const newFiles: UploadedFile[] = Array.from(validFiles).map(f => ({
-      id: `${Date.now()}-${Math.random()}`,
-      name: f.name,
-      size: f.size > 1048576 ? `${(f.size/1048576).toFixed(1)} MB` : `${Math.round(f.size/1024)} KB`,
-      processing: true,
-    }))
-    
-    setUploads(prev => ({ ...prev, [activeTab]: [...(prev[activeTab]||[]), ...newFiles] }))
-    
-    try {
-      const formData = new FormData()
-      validFiles.forEach(f => {
-        formData.append(activeTab, f)
-      })
-      await uploadBibleFiles(formData)
-    } catch (err) {
-      console.error('Failed to upload files:', err)
-      // If error occurs, we could potentially remove them from the list or show an error
-    } finally {
-      newFiles.forEach(nf => {
-        setUploads(prev => ({
-          ...prev,
-          [activeTab]: (prev[activeTab]||[]).map(f => f.id === nf.id ? { ...f, processing:false } : f),
-        }))
-      })
+    setAlert({ type: 'success', text: `Uploading ${validFiles.length} file(s)...` })
+
+    // Upload each file individually
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i]
+      const fileId = `${Date.now()}-${Math.random()}`
+      
+      try {
+        const formData = new FormData()
+        
+        let fieldName = activeTab;
+        if (activeTab === 'staff') fieldName = 'directory';
+        else if (activeTab === 'org') fieldName = 'chart';
+        else if (activeTab === 'sops') fieldName = 'sop';
+        
+        formData.append(fieldName, file)
+        
+        const res = await uploadBibleFiles(formData)
+        
+        if (res?.status === 'success' || res?.ok !== false) {
+          // If successful, add to dashboard list
+          const newFile: UploadedFile = {
+            id: fileId,
+            name: file.name,
+            size: file.size > 1048576 ? `${(file.size/1048576).toFixed(1)} MB` : `${Math.round(file.size/1024)} KB`,
+            processing: false,
+          }
+          setUploads(prev => ({
+            ...prev,
+            [activeTab]: [...(prev[activeTab]||[]), newFile],
+          }))
+          setAlert({ type: 'success', text: `${file.name} uploaded successfully.` })
+          fetchMetrics() // Refresh metrics
+        } else {
+          setAlert({ type: 'error', text: res?.message || `Failed to upload ${file.name}.` })
+        }
+      } catch (err: any) {
+        console.error('Failed to upload file:', file.name, err)
+        setAlert({ type: 'error', text: err.message || `An error occurred while uploading ${file.name}.` })
+      }
     }
   }, [activeTab])
 
@@ -503,8 +537,8 @@ export default function BusinessBiblePage() {
           <div className="summary-grid">
             {[
               { label:'Documents uploaded', value:`${doneCount} / ${BIBLE_DOCS.length}` },
-              { label:'Staff identified',   value:'47' },
-              { label:'Last updated',       value:'Jun 18, 2026' },
+              { label:'Staff identified',   value: identifiedCount.toString() },
+              { label:'Last updated',       value: lastUpdatedStr },
               { label:'Status',             value: allRequired ? 'Complete' : 'Incomplete', highlight: true },
             ].map((m) => (
               <div key={m.label} className="summary-cell">
@@ -528,11 +562,14 @@ export default function BusinessBiblePage() {
 
             {/* Category tabs */}
             <div className="tab-row">
-              {BIBLE_DOCS.map(d => (
+              {BIBLE_DOCS.map(d => {
+                const docKey = d.id === 'org' ? 'chart' : d.id;
+                const hasFiles = (uploads[d.id]||[]).length > 0 || (metrics?.tasks?.[docKey] || false);
+                return (
                 <BibleTabBtn key={d.id} doc={d} active={d.id === activeTab}
-                  hasFiles={(uploads[d.id]||[]).length > 0}
+                  hasFiles={hasFiles}
                   onClick={() => setActiveTab(d.id)} />
-              ))}
+              )})}
             </div>
 
             {/* Active doc card */}
@@ -547,7 +584,7 @@ export default function BusinessBiblePage() {
                   <div style={{ fontSize:15, fontWeight:700, color:INK, letterSpacing:'-.015em', marginBottom:3 }}>
                     {doc.name}
                     {doc.required && <span style={{ color:GOLD, marginLeft:4, fontSize:13 }}>*</span>}
-                    {(uploads[doc.id]||[]).length > 0 && !doc.required && (
+                    {((uploads[doc.id]||[]).length > 0 || (metrics?.tasks?.[doc.id === 'org' ? 'chart' : doc.id])) && (
                       <span style={{ marginLeft:8, fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:GREEN_BG, color:GREEN }}>Uploaded</span>
                     )}
                   </div>
@@ -644,9 +681,9 @@ export default function BusinessBiblePage() {
                 <div style={{ fontSize:11, color:INK_40 }}>Only CSV files are accepted</div>
               </div>
 
-              {uploadError && (
-                <div style={{ marginBottom: 16, padding: '10px 12px', background: 'rgba(180,83,9,0.1)', color: '#B45309', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
-                  {uploadError}
+              {alert && (
+                <div style={{ marginBottom: 16, padding: '10px 12px', background: alert.type === 'error' ? 'rgba(180,83,9,0.1)' : 'rgba(46,125,82,0.1)', color: alert.type === 'error' ? '#B45309' : GREEN, borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
+                  {alert.text}
                 </div>
               )}
 
@@ -679,13 +716,13 @@ export default function BusinessBiblePage() {
           {/* ── RIGHT ── */}
           <div className="right-col">
 
-            {/* Version history */}
+            {/* Version history
             <Card hov={historyHov} onEnter={() => setHistoryHov(true)} onLeave={() => setHistoryHov(false)}>
               <h2 style={{ fontSize:13, fontWeight:700, color:INK, letterSpacing:'-.01em', marginBottom:14 }}>Version history</h2>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {versionHistory.map(v => <VersionRow key={v.version} v={v} />)}
               </div>
-            </Card>
+            </Card> */}
 
             {/* What to include */}
             <Card hov={guideHov} onEnter={() => setGuideHov(true)} onLeave={() => setGuideHov(false)}>
@@ -727,7 +764,8 @@ export default function BusinessBiblePage() {
                 Required documents
               </p>
               {BIBLE_DOCS.filter(d => d.required).map(d => {
-                const has = (uploads[d.id]||[]).length > 0
+                const docKey = d.id === 'org' ? 'chart' : d.id;
+                const has = (uploads[d.id]||[]).length > 0 || (metrics?.tasks?.[docKey] || false);
                 return (
                   <div key={d.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:`1px solid ${INK_06}` }}>
                     <span style={{ fontSize:15, flexShrink:0 }}>{d.icon}</span>

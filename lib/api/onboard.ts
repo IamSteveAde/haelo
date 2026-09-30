@@ -35,6 +35,12 @@ export const uploadBibleFiles = async (formData: FormData) => {
   })
 }
 
+export const getBibleMetrics = async () => {
+  return await apiFetch('/api/bible/metrics', {
+    method: 'GET'
+  })
+}
+
 export const saveHaeloTone = async (tone: string) => {
   return await apiFetch('/api/onboard/haelo-tone', {
     method: 'POST',
