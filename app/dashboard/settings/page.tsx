@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Save, CheckCircle, AlertCircle, Zap, Bell, Layers, Shield, Mail, Smartphone, Plus, Users, UserPlus, MoreVertical, X } from 'lucide-react'
-import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings, addWhatsappNumber, verifyWhatsappNumber } from '@/lib/api/onboard'
+import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings, addWhatsappNumber, verifyWhatsappNumber, getWhatsappNumber } from '@/lib/api/onboard'
 import { getAccounts, inviteAccount, resendInvite, removeAccount, type OrgAccount, type AccountRole } from '@/lib/api/accounts'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
@@ -101,12 +101,13 @@ function SelectInput({ value, onChange, children }: { value: string; onChange: (
 }
 
 // ── TEXT INPUT ────────────────────────────────────────────────────────────────
-function TextInput({ type = 'text', placeholder, value, onChange }: { type?: string; placeholder: string; value: string; onChange: (v: string) => void }) {
+function TextInput({ type = 'text', placeholder, value, onChange, disabled }: { type?: string; placeholder: string; value: string; onChange: (v: string) => void, disabled?: boolean }) {
   const [foc, setFoc] = useState(false)
   return (
     <input type={type} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}
+      disabled={disabled}
       onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
-      style={{ width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif", background: foc ? WHITE : CREAM, border: `1.5px solid ${foc ? INK : INK_10}`, borderRadius: 10, padding: '11px 14px', fontSize: 13, color: INK, outline: 'none', boxShadow: foc ? '0 0 0 3px rgba(17,39,11,0.06)' : 'none', transition: 'all .18s' }} />
+      style={{ width: '100%', fontFamily: "'Plus Jakarta Sans', sans-serif", background: disabled ? CREAM : (foc ? WHITE : CREAM), border: `1.5px solid ${disabled ? INK_10 : (foc ? INK : INK_10)}`, borderRadius: 10, padding: '11px 14px', fontSize: 13, color: disabled ? INK_60 : INK, outline: 'none', boxShadow: foc && !disabled ? '0 0 0 3px rgba(17,39,11,0.06)' : 'none', transition: 'all .18s', opacity: disabled ? 0.7 : 1, cursor: disabled ? 'not-allowed' : 'text' }} />
   )
 }
 
@@ -365,6 +366,22 @@ export default function SettingsPage() {
   const [waError, setWaError] = useState('')
   const otpRefs = useRef<(HTMLInputElement|null)[]>([])
 
+  const fetchWaDetails = async () => {
+    try {
+      const res = await getWhatsappNumber()
+      if (res?.data) {
+        setWaNum(res.data.phone || '')
+        setWaVerified(res.data.phoneVerified || false)
+      }
+    } catch (err) {
+      console.error('Failed to fetch whatsapp details:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchWaDetails()
+  }, [])
+
   const handleWaSend = async () => {
     const rawPhone = waNum.replace(/\D/g, '')
     if (rawPhone.length < 10) {
@@ -392,6 +409,7 @@ export default function SettingsPage() {
       setWaVerified(true)
       setWaSent(false)
       setWaCode(['','','','','',''])
+      fetchWaDetails()
     } catch (err: any) {
       setWaError(err.message || 'OTP verification failed')
     } finally {
@@ -410,8 +428,6 @@ export default function SettingsPage() {
       setWaCode(next)
       if (i + cleanVal.length < 6) otpRefs.current[i + cleanVal.length]?.focus()
       else otpRefs.current[5]?.focus()
-      
-      if (next.every(c => c !== '')) triggerWaVerify(next)
       return
     }
 
@@ -423,10 +439,6 @@ export default function SettingsPage() {
     setWaCode(next)
     
     if (v && i < 5) otpRefs.current[i+1]?.focus()
-    
-    if (next.every(c => c !== '')) {
-      triggerWaVerify(next)
-    }
   }
   const [waVerified, setWaVerified] = useState(true)
   const [saved, setSaved]         = useState(false)
@@ -884,7 +896,7 @@ export default function SettingsPage() {
               <FieldLabel>Update WhatsApp number</FieldLabel>
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ flex: 1 }}>
-                  <TextInput type="tel" placeholder="+234 800 000 0000" value={waNum} onChange={setWaNum} />
+                  <TextInput type="tel" placeholder="+234 800 000 0000" value={waNum} onChange={setWaNum} disabled={waSent} />
                 </div>
                 <VerifyBtn onClick={handleWaSend} loading={waLoading} sent={waSent} />
               </div>
@@ -907,18 +919,34 @@ export default function SettingsPage() {
                         type="text" inputMode="text" value={digit}
                         onChange={e => handleWaCode(i, e.target.value)}
                         onKeyDown={e => { if (e.key==='Backspace' && !waCode[i] && i>0) { otpRefs.current[i-1]?.focus(); const next = [...waCode]; next[i-1] = ''; setWaCode(next); } }}
-                        style={{ height: 44, borderRadius: 10, background: digit ? WHITE : CREAM, border: `1.5px solid ${digit ? INK_40 : INK_10}`, color: INK, textAlign: 'center', fontSize: 18, fontWeight: 700, outline: 'none' }}
+                        style={{ height: 44, borderRadius: 10, background: digit ? WHITE : CREAM, border: `1.5px solid ${digit ? INK_40 : INK_10}`, color: INK, textAlign: 'center', fontSize: 18, fontWeight: 700, outline: 'none', minWidth: 0, width: '100%' }}
                       />
                     ))}
                   </div>
                   
-                  {waVerifying && (
-                    <p style={{ fontSize: 11, color: INK_40, marginBottom: 8 }}>Verifying...</p>
-                  )}
-                  
-                  <button onClick={() => { setWaSent(false); setWaCode(['','','','','','']); setWaError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: INK_60, padding: 0 }}>
-                    Cancel
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button 
+                      onClick={() => triggerWaVerify(waCode)} 
+                      disabled={!waCode.every(c => c !== '') || waVerifying}
+                      style={{ 
+                        background: waCode.every(c => c !== '') ? INK : INK_20, 
+                        color: WHITE, 
+                        border: 'none', 
+                        borderRadius: 8, 
+                        padding: '8px 16px', 
+                        fontSize: 11, 
+                        fontWeight: 700, 
+                        cursor: waCode.every(c => c !== '') && !waVerifying ? 'pointer' : 'not-allowed',
+                        transition: 'background .2s',
+                        fontFamily: "'Plus Jakarta Sans', sans-serif"
+                      }}>
+                      {waVerifying ? 'Verifying...' : 'Verify'}
+                    </button>
+                    
+                    <button onClick={() => { setWaSent(false); setWaCode(['','','','','','']); setWaError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: INK_60, padding: 0 }}>
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

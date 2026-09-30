@@ -14,6 +14,12 @@ export const saveDomain = async (domain: string) => {
   })
 }
 
+export const getWhatsappNumber = async () => {
+  return await apiFetch('/api/onboard/whatsapp/number', {
+    method: 'GET'
+  })
+}
+
 export const addWhatsappNumber = async (phone: string) => {
   return await apiFetch('/api/onboard/whatsapp/add-number', {
     method: 'POST',
