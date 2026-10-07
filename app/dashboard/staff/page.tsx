@@ -566,8 +566,8 @@ export default function StaffPage() {
         const unrecRes = await getUnrecognizedSenders(1, 7)
         if (unrecRes?.data?.senders) {
           setUnrecognised(unrecRes.data.senders.map((item: any) => ({
-            email: item.email || item,
-            received: item.received || 'Recently'
+            email: item.emailAddress || item.email || (typeof item === 'string' ? item : 'Unknown Sender'),
+            received: item.createdAt || item.received || 'Recently'
           })))
         }
       } catch (err) {
