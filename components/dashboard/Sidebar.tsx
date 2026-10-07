@@ -135,6 +135,8 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
   
   const [userType, setUserType] = useState<string | null>(null)
   const [profile, setProfile] = useState<{name: string, email: string, userType: string} | null>(null)
+  const [sub, setSub] = useState<{seatCount: number, isActive: boolean} | null>(null)
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setUserType(localStorage.getItem('userType'))
@@ -151,6 +153,14 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
         }
       }).catch(err => console.error(err))
     })
+
+    import('@/lib/api/billing').then(({ getSubscription }) => {
+      getSubscription().then(res => {
+        if (res?.data) {
+          setSub(res.data)
+        }
+      }).catch(err => console.error(err))
+    })
   }, [])
 
   return (
@@ -161,7 +171,7 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
       borderRight: `1px solid ${INK_10}`,
       fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
-      <style>{SIDEBAR_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: SIDEBAR_CSS }} />
 
       {/* ── TOP: Logo ── */}
       <div style={{ padding: '20px 18px 18px', borderBottom: `1px solid ${INK_10}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -192,9 +202,15 @@ function SidebarInner({ mobile, onClose }: { mobile?: boolean; onClose?: () => v
         </div>
         {/* Plan badge */}
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: INK_06, border: `1px solid ${INK_10}`, borderRadius: 20, padding: '3px 10px' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: INK_60, letterSpacing: '.04em', textTransform: 'uppercase' as const }}>Team Plan</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: INK_60, letterSpacing: '.04em', textTransform: 'uppercase' as const }}>{sub ? (sub.seatCount === 1 ? 'Individual Plan' : sub.seatCount <= 5 ? 'Team Plan' : 'Business Plan') : 'Team Plan'}</span>
           <span style={{ width: 3, height: 3, background: INK_20, borderRadius: '50%' }} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: INK_40 }}>5 seats</span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: INK_40 }}>{sub ? sub.seatCount : 5} seats</span>
+          {sub && (
+            <>
+              <span style={{ width: 3, height: 3, background: INK_20, borderRadius: '50%' }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: sub.isActive ? '#2E7D52' : '#C0392B', letterSpacing: '.02em', textTransform: 'uppercase' as const, background: sub.isActive ? 'rgba(46,125,82,0.1)' : 'rgba(192,57,43,0.1)', padding: '2px 6px', borderRadius: 10 }}>{sub.isActive ? 'Active' : 'Expired'}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -308,7 +324,7 @@ export default function DashboardSidebar() {
         </div>
       )}
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media(min-width:1024px){
           .lg-sidebar{display:flex!important}
           .lg-hide{display:none!important}
@@ -316,7 +332,7 @@ export default function DashboardSidebar() {
         @media(max-width:1023px){
           .lg-sidebar{display:none!important}
         }
-      `}</style>
+      ` }} />
     </>
   )
 }

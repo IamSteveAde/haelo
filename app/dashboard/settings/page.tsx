@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Save, CheckCircle, AlertCircle, Zap, Bell, Layers, Shield, Mail, Smartphone, Plus, Users, UserPlus, MoreVertical, X } from 'lucide-react'
-import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings, addWhatsappNumber, verifyWhatsappNumber, getWhatsappNumber } from '@/lib/api/onboard'
+import { saveTimerConfig, getHaeloTone, getProviders, connectEmail, getNotificationSettings, saveNotificationSettings, addWhatsappNumber, verifyWhatsappNumber, getWhatsappNumber, getDomain, saveDomain } from '@/lib/api/onboard'
 import { getAccounts, inviteAccount, resendInvite, removeAccount, type OrgAccount, type AccountRole } from '@/lib/api/accounts'
 
 // ── TOKENS ───────────────────────────────────────────────────────────────────
@@ -448,11 +448,48 @@ export default function SettingsPage() {
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
   
   const [userType, setUserType] = useState<string | null>(null)
+  
+  const [domain, setDomain] = useState<string>('')
+  const [editingDomain, setEditingDomain] = useState(false)
+  const [domainInput, setDomainInput] = useState('')
+  const [domainLoading, setDomainLoading] = useState(false)
+  const [domainError, setDomainError] = useState('')
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setUserType(localStorage.getItem('userType'))
     }
   }, [])
+
+  useEffect(() => {
+    const fetchDomain = async () => {
+      try {
+        const res = await getDomain()
+        if (res?.data?.domain) {
+          setDomain(res.data.domain)
+          setDomainInput(res.data.domain)
+        }
+      } catch (err) {
+        console.error('Failed to fetch domain:', err)
+      }
+    }
+    fetchDomain()
+  }, [])
+
+  const handleSaveDomain = async () => {
+    if (!domainInput.trim()) return
+    setDomainLoading(true)
+    setDomainError('')
+    try {
+      await saveDomain(domainInput.trim())
+      setDomain(domainInput.trim())
+      setEditingDomain(false)
+    } catch (err: any) {
+      setDomainError(err.message || 'Failed to save domain')
+    } finally {
+      setDomainLoading(false)
+    }
+  }
 
   const loadedConfigStr = useRef<string | null>(null)
   const loadedNotifsStr = useRef<string | null>(null)
@@ -671,7 +708,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <main className="main-pad" style={{ flex: 1, padding: '40px 40px 60px', overflowY: 'auto', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
 
         {/* HEADER */}
@@ -961,11 +998,36 @@ export default function SettingsPage() {
                 <Shield size={15} color="#fff" />
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 2 }}>@company.com</p>
-                <p style={{ fontSize: 11, color: INK_40, lineHeight: 1.5 }}>All external emails are permanently ignored. This cannot be changed.</p>
+                {editingDomain ? (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <TextInput type="text" placeholder="company.com" value={domainInput} onChange={setDomainInput} disabled={domainLoading} />
+                    </div>
+                    <button onClick={handleSaveDomain} disabled={domainLoading} style={{ background: INK, color: '#fff', border: 'none', padding: '11px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: domainLoading ? 'not-allowed' : 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      {domainLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button onClick={() => { setEditingDomain(false); setDomainInput(domain); setDomainError(''); }} disabled={domainLoading} style={{ background: 'transparent', color: INK_60, border: 'none', padding: '11px 16px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 2 }}>@{domain || 'company.com'}</p>
+                    <p style={{ fontSize: 11, color: INK_40, lineHeight: 1.5 }}>All external emails are permanently ignored. This cannot be changed.</p>
+                  </>
+                )}
               </div>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: INK_06, color: INK_40, flexShrink: 0 }}>Locked</span>
+              {!editingDomain && (
+                userType === 'admin' ? (
+                  <button onClick={() => setEditingDomain(true)} style={{ fontSize: 10, fontWeight: 700, padding: '5px 12px', borderRadius: 20, background: INK_06, color: INK, flexShrink: 0, border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Edit</button>
+                ) : (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: INK_06, color: INK_40, flexShrink: 0 }}>Locked</span>
+                )
+              )}
             </div>
+            {domainError && (
+               <p style={{ fontSize: 11, color: '#C0392B', marginTop: 8, padding: '0 16px' }}>{domainError}</p>
+            )}
           </SectionCard>
 
           {/* ── 5. NOTIFICATIONS ── */}

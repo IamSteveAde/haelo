@@ -251,7 +251,7 @@ function StatCard({ s, delay }: { s: StatData; delay: number }) {
       {loading ? (
         <div style={{ height: 42, display: 'flex', alignItems: 'center' }}>
           <Loader2 size={20} color={INK_20} className="spinner" />
-          <style>{`@keyframes spin { 100% { transform: rotate(360deg); } } .spinner { animation: spin 1s linear infinite; }`}</style>
+          <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { 100% { transform: rotate(360deg); } } .spinner { animation: spin 1s linear infinite; }` }} />
         </div>
       ) : (
         <>
@@ -541,7 +541,7 @@ export default function OverviewPage() {
 
   return (
     <>
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <main
         className="page-main"
         style={{ flex: 1, padding: '40px 40px 60px', overflowY: 'auto', maxWidth: 1200, margin: '0 auto', width: '100%' }}

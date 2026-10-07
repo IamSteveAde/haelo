@@ -517,7 +517,7 @@ export default function BusinessBiblePage() {
 
   return (
     <>
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <main className="page-main">
 
         {/* ── HEADER ── */}

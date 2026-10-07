@@ -652,7 +652,7 @@ export default function StaffPage() {
 
   return (
     <>
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={addStaff} />}
 
       <main className="page-main">

@@ -1311,7 +1311,7 @@ export default function OnboardingPage() {
 
   return (
     <>
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
       <header style={{ background:NAVY, height:60, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 24px', position:'sticky', top:0, zIndex:200 }}>
         <HaeloLogo />

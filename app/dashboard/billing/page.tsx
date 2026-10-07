@@ -604,9 +604,11 @@ function MemberRow({
 function PricingPlanCard({
   plan,
   isCurrent,
+  subActive,
 }: {
   plan: PricingPlan
   isCurrent: boolean
+  subActive?: boolean | null
 }) {
   const paystackUrl =
     getPaystackUrl(plan)
@@ -667,19 +669,36 @@ function PricingPlanCard({
             </h3>
 
             {isCurrent && (
-              <span
-                style={{
-                  fontSize: 9,
-                  fontWeight: 700,
-                  padding: '3px 8px',
-                  borderRadius: 20,
-                  background:
-                    GREEN_BG,
-                  color: '#4ABA7A',
-                }}
-              >
-                CURRENT PLAN
-              </span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: 20,
+                    background:
+                      GREEN_BG,
+                    color: '#4ABA7A',
+                  }}
+                >
+                  CURRENT PLAN
+                </span>
+                {subActive !== undefined && subActive !== null && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: 20,
+                      background: subActive ? 'rgba(46,125,82,0.15)' : 'rgba(192,57,43,0.15)',
+                      color: subActive ? '#4ABA7A' : '#C0392B',
+                      letterSpacing: '0.02em'
+                    }}
+                  >
+                    {subActive ? 'ACTIVE' : 'EXPIRED'}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
@@ -910,6 +929,11 @@ export default function BillingPage() {
     setStaffLoading,
   ] = useState(true)
 
+  const [
+    subDetails,
+    setSubDetails
+  ] = useState<{seatCount: number, isActive: boolean} | null>(null)
+
   // ── FETCH TEAM ACCOUNTS ────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -951,6 +975,14 @@ export default function BillingPage() {
       }
 
     fetchAccounts()
+    
+    import('@/lib/api/billing').then(({ getSubscription }) => {
+      getSubscription().then(res => {
+        if (res?.data) {
+          setSubDetails(res.data)
+        }
+      }).catch(err => console.error('Failed to fetch subscription:', err))
+    })
   }, [])
 
   /*
@@ -962,7 +994,7 @@ export default function BillingPage() {
    * returned by the backend.
    */
   const seats =
-    totalStaffCount || 1
+    subDetails?.seatCount || totalStaffCount || 1
 
   const currentPlan =
     getPlanForUsers(seats)
@@ -1122,9 +1154,7 @@ export default function BillingPage() {
 
   return (
     <>
-      <style>
-        {GLOBAL_CSS}
-      </style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
       <main
         className="main-pad"
@@ -1267,6 +1297,7 @@ export default function BillingPage() {
                       currentPlan.id ===
                       plan.id
                     }
+                    subActive={subDetails?.isActive}
                   />
                 )
               )}

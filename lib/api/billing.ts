@@ -5,3 +5,9 @@ export const getBillingHistory = async (page: number = 1, limit: number = 5) => 
     method: 'GET'
   })
 }
+
+export const getSubscription = async () => {
+  return await apiFetch(`/api/billing/subscription/find`, {
+    method: 'GET'
+  })
+}

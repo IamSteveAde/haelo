@@ -284,7 +284,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <div style={{ minHeight: '100vh', display: 'flex', background: CREAM, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
         {/* ── SIDEBAR ── */}
